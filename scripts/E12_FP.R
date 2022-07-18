@@ -178,5 +178,8 @@ rm(filenames)
 # all_equal(train_prop, test_prop)
 
 
-
-
+orglist <- data.frame(table(H2020_organization$name))
+orgtype <- data.frame(table(H2020_organization$activityType))
+pubtype <- data.frame(table(H2020_publications$isPublishedAs))
+delivtype <- data.frame(table(H2020_deliverables$deliverableType))
+IPRtype <- data.frame(table(H2020_Irps$type))

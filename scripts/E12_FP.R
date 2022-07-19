@@ -183,3 +183,108 @@ orgtype <- data.frame(table(H2020_organization$activityType))
 pubtype <- data.frame(table(H2020_publications$isPublishedAs))
 delivtype <- data.frame(table(H2020_deliverables$deliverableType))
 IPRtype <- data.frame(table(H2020_Irps$type))
+
+skim(H2020_project)
+
+cols_factor <- c("status","fundingScheme")
+H2020_project[cols_factor] <- lapply(H2020_project[cols_factor], factor)
+sapply(H2020_project, class)
+
+fundingSchemes <- data.frame(table(H2020_project$fundingScheme))
+
+
+#Cuántos proyectos tienen al menos una publicación?
+
+public_proy_tipo <- H2020_publications %>% 
+    group_by(projectID,projectAcronym,isPublishedAs) %>%
+    summarize(num_public=n())
+
+public_proy <- H2020_publications %>% 
+  group_by(projectID,projectAcronym) %>%
+  summarize(num_public=n())
+
+colnames(public_proy) <- c("id","acronym","numPublics")
+
+nrow(H2020_project)
+
+
+H2020_project <- 
+  full_join(H2020_project, public_proy,
+             by = c("id","acronym"))
+
+nrow(H2020_project)
+
+summary(H2020_project$numPublics)
+
+proj_sin_pubs <- subset(H2020_project$numPublics)
+
+proj_sin_pubs <- H2020_project[is.na(H2020_project$numPublics),]
+
+
+
+
+#Número de socios por proyecto:
+
+
+socios_proy_tipo <- H2020_organization %>% 
+  group_by(projectID,projectAcronym,activityType) %>%
+  summarize(num_org=n())
+
+socios_proy <- H2020_organization %>% 
+  group_by(projectID,projectAcronym) %>%
+  summarize(num_org=n())
+
+colnames(socios_proy) <- c("id","acronym","numPartners")
+
+nrow(H2020_project)
+
+H2020_project <- 
+  full_join(H2020_project, socios_proy,
+            by = c("id","acronym"))
+
+nrow(H2020_project)
+
+summary(H2020_project$numPartners)
+
+hist(table(H2020_project$numPartners))
+
+
+# Agregación de datos:
+
+# datos_agreg_prof_cur_w <- datos %>% 
+#   group_by(id_per_prof_cur) %>%
+#   summarize(puntaje_Cur_Sec_agr=weighted.mean(puntajeCurSecNUM,numeroRespuestas),
+#             puntaje_enc_estandar=weighted.mean(puntaje_enc_estandar,numeroRespuestas),
+#             id_prof_curso=id_prof_curso,
+#             id=id_unico_db_prof_cur,
+#             no_obs = n(),
+#             notaProm_agr=weighted.mean(notaPromedio,numeroInscritos),
+#             notaProm_est_agr=weighted.mean(nota_promedio_estandar,numeroInscritos),
+#             comenNotas,
+#             sem_prom_pond=weighted.mean(semestre_prom_pond,numeroInscritos),
+#             propor_mujeres=weighted.mean(Propor_mujeres,numeroInscritos),
+#             tasa_resp=weighted.mean(tasa_resp,numeroInscritos),
+#             tasa_reprob=weighted.mean(porcReprobado,numeroInscritos),
+#             facultadCurso,
+#             facultadProfe,
+#             dptoProfe,
+#             tipoContrato,
+#             periodo=periodo,
+#             num_cursos_prof,
+#             num_Inscr=sum(numeroInscritos),
+#             num_resp=sum(numeroRespuestas),
+#             Prim_Trat=`Primer_trat_prof_curso (Cohorte)`,
+#             Tratamiento=Tratamiento_definido
+#   )
+
+
+
+
+### IDEAS:
+
+# Proporción del consorcio
+# Experiencia previa
+# Ranking
+# Red
+
+

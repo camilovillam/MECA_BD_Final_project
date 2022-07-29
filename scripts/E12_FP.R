@@ -128,14 +128,48 @@ rm(filenames)
 ### 1.1.2. Framework Programme 7 (FP7)  ----
 
 
+setwd("~/GitHub/MECA_BD_Final_project/")
+
+
+#### Importar todos los archivos de Excel del directorio:
+
+filenames <- list.files("./stores/EU_research_projects/FP7_projects", pattern="*.xlsx", full.names=TRUE)
+filenames
+
+
+FP7_euroSciVoc <-     import(filenames[1])
+FP7_publications <-   import(filenames[2])
+FP7_legalBasis <-     import(filenames[3])
+FP7_organization <-   import(filenames[4])
+FP7_project <-        import(filenames[5])
+FP7_Irps <-           import(filenames[6])
+FP7_reportSummaries<- import(filenames[7])
+FP7_topics <-         import(filenames[8])
+FP7_webItem <-        import(filenames[9])
+FP7_webLink <-        import(filenames[10])
+
+
+sapply(FP7_publications, class)
+
 
 
 ### 1.1.3. CORDIS reference data  ----
 
+#### Importar todos los archivos de Excel del directorio:
 
+filenames <- list.files("./stores/EU_research_projects/reference_data", pattern="*.xls*", full.names=TRUE)
+filenames
+
+
+cordis_countries <-       import(filenames[1])
+FP7_programmes <-         import(filenames[2])
+H2020_topic_keywords <-   import(filenames[3])
+cordis_org_activity <-    import(filenames[4])
+cordis_funding_scheme <-  import(filenames[5])
 
 
 ## 1.2. Bases de datos de OECD REGPAT (registros de patentes)  ----
+
 
 
 

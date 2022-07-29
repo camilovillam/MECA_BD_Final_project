@@ -303,9 +303,78 @@ hist(table(H2020_project$numPartners))
 # 3. PREPARACIÓN BASES DE DATOS: INSTITUCIONES ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+##3.1. Listado único de organizaciones ----
+
+
+organizations <- distinct(H2020_organization[,3:14])
 
 
 
+##3.2 Ranking ----
+
+ranking2022 <- CWTS_ranking[CWTS_ranking$Period=="2017–2020" & 
+                              CWTS_ranking$Field =="All sciences" &
+                              CWTS_ranking$Frac_counting==1,]
+
+nrow(ranking2022)
+ranking2022_un <- distinct(ranking2022[,1:2])
+
+
+ranking2022 <- ranking2022[order(ranking2022$impact_P,decreasing = TRUE),]
+ranking2022 <- ranking2022 %>% mutate(ranking_p= 1:n())
+ranking2022$name <- toupper(ranking2022$University) 
+
+
+organizations_ranking <- left_join(organizations,ranking2022[,c("name","ranking_p")],by="name")
+
+universities <- organizations_ranking[organizations_ranking$activityType %in% c("HES"),]
+
+colSums(is.na(universities))
+nrow(universities)
+
+print(paste0("El porcentaje de universidades encontradas es ", round(100 - (3681/4157)*100,1), " %"))
+
+
+#PROBLEMA COMPLEJO, NAME DISAMBIGUATION.
+
+# Solución para este caso específico: la excelencia científica se mide solo para
+# las 50 top universidades, es decir, es una variable dummy para reflejar
+# si está en el top 50 del CWTS (ver paper).
+# En este caso, podemos crear un diccionario de nombres para las 50 universidades
+# top.
+# Posible trabajo futuro: incluir todas las universidades, adelantar trabajo
+# de corrección de nombres.
+
+
+
+##3.3 Patentes ----
+
+
+
+
+#3.4 Experiencia previa en FP7 ----
+
+
+skim(H2020_organization)
+table(H2020_organization$role)
+table(FP7_organization$role)
+
+
+#Se calculan el número de participaciones y de coordinaciones en el FP7
+org_particip_FP7 <- FP7_organization %>% 
+  group_by(organisationID) %>% 
+  summarize(num_particip_FP7= sum(role=="participant"),
+            num_coord_FP7 = sum(role=="coordinator"))
+
+#Se hace el join con la base de H2020
+nrow(H2020_organization)
+H2020_organization <- left_join(H2020_organization,org_particip_FP7,by="organisationID")
+
+colSums(is.na(H2020_organization))
+
+#A los que quedan con NA se les imputa 0 (no han participado ni coordinado)
+H2020_organization$num_particip_FP7[is.na(H2020_organization$num_particip_FP7)] <- 0
+H2020_organization$num_coord_FP7[is.na(H2020_organization$num_coord_FP7)] <- 0
 
 
 

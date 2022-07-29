@@ -54,6 +54,9 @@ p_load(rio,
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
+setwd("~/GitHub/MECA_BD_Final_project/")
+
+
 ## 1.1. Bases de datos de proyectos europeos ----
 
 ### 1.1.1. Horizon 2020 (H2020) ----
@@ -61,9 +64,7 @@ p_load(rio,
 
 #### Importar todos los archivos de Excel del directorio:
 
-setwd("~/GitHub/MECA_BD_Final_project/stores/EU_research_projects/H2020_projects")
-
-filenames <- list.files(".", pattern="*.xlsx", full.names=TRUE)
+filenames <- list.files("./stores/EU_research_projects/H2020_projects", pattern="*.xlsx", full.names=TRUE)
 filenames
 
 
@@ -139,8 +140,21 @@ rm(filenames)
 
 
 
-### 1.3 Base de datos del CWTS Leiden Ranking 2022 (excelencia científica)  ----
+## 1.3 Base de datos del CWTS Leiden Ranking 2022 (excelencia científica)  ----
 
+setwd("~/GitHub/MECA_BD_Final_project/")
+
+#La primera vez lo cargo desde el Excel
+#CWTS_ranking <- import("./stores/CWTS_Leiden_Ranking/CWTS Leiden Ranking 2022.xlsx")
+
+#Lo guardo para hacer más óptimo el tamaño
+export(CWTS_ranking,"./stores/CWTS_Leiden_Ranking/CWTS_ranking_2022.rds")
+
+#Cargo el archivo de ranking desde el .RDS
+CWTS_ranking <- import("./stores/CWTS_Leiden_Ranking/CWTS_ranking_2022.rds")
+
+
+sapply(CWTS_ranking, class)
 
 
 
@@ -249,42 +263,67 @@ summary(H2020_project$numPartners)
 hist(table(H2020_project$numPartners))
 
 
-# Agregación de datos:
 
-# datos_agreg_prof_cur_w <- datos %>% 
-#   group_by(id_per_prof_cur) %>%
-#   summarize(puntaje_Cur_Sec_agr=weighted.mean(puntajeCurSecNUM,numeroRespuestas),
-#             puntaje_enc_estandar=weighted.mean(puntaje_enc_estandar,numeroRespuestas),
-#             id_prof_curso=id_prof_curso,
-#             id=id_unico_db_prof_cur,
-#             no_obs = n(),
-#             notaProm_agr=weighted.mean(notaPromedio,numeroInscritos),
-#             notaProm_est_agr=weighted.mean(nota_promedio_estandar,numeroInscritos),
-#             comenNotas,
-#             sem_prom_pond=weighted.mean(semestre_prom_pond,numeroInscritos),
-#             propor_mujeres=weighted.mean(Propor_mujeres,numeroInscritos),
-#             tasa_resp=weighted.mean(tasa_resp,numeroInscritos),
-#             tasa_reprob=weighted.mean(porcReprobado,numeroInscritos),
-#             facultadCurso,
-#             facultadProfe,
-#             dptoProfe,
-#             tipoContrato,
-#             periodo=periodo,
-#             num_cursos_prof,
-#             num_Inscr=sum(numeroInscritos),
-#             num_resp=sum(numeroRespuestas),
-#             Prim_Trat=`Primer_trat_prof_curso (Cohorte)`,
-#             Tratamiento=Tratamiento_definido
-#   )
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 3. PREPARACIÓN BASES DE DATOS: INSTITUCIONES ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
 
-### IDEAS:
-
-# Proporción del consorcio
-# Experiencia previa
-# Ranking
-# Red
 
 
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 4. PREPARACIÓN BASES DE DATOS: CONSORCIOS ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 5. PREPARACIÓN BASES DE DATOS: PROYECTOS ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 6. MODELOS DE PREDICCIÓN VARIABLES Y ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 7. CÁLCULO ÍNDICE AGREGADO ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 8. CLASIFICACIÓN ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

@@ -317,15 +317,20 @@ ranking2022 <- CWTS_ranking[CWTS_ranking$Period=="2017–2020" &
                               CWTS_ranking$Frac_counting==1,]
 
 nrow(ranking2022)
-ranking2022_un <- distinct(ranking2022[,1:2])
 
-
+#Ranking con base en el número total de publicaciones:
 ranking2022 <- ranking2022[order(ranking2022$impact_P,decreasing = TRUE),]
 ranking2022 <- ranking2022 %>% mutate(ranking_p= 1:n())
-ranking2022$name <- toupper(ranking2022$University) 
+
+#Ranking con base en el número de publicaciones Top 1%
+ranking2022 <- ranking2022[order(ranking2022$P_top1,decreasing = TRUE),]
+ranking2022 <- ranking2022 %>% mutate(ranking_p_top1= 1:n())
 
 
-organizations_ranking <- left_join(organizations,ranking2022[,c("name","ranking_p")],by="name")
+ranking2022$name <- toupper(ranking2022$University)
+
+
+organizations_ranking <- left_join(organizations,ranking2022[,c("name","ranking_p","ranking_p_top1")],by="name")
 
 universities <- organizations_ranking[organizations_ranking$activityType %in% c("HES"),]
 
@@ -345,6 +350,9 @@ print(paste0("El porcentaje de universidades encontradas es ", round(100 - (3681
 # Posible trabajo futuro: incluir todas las universidades, adelantar trabajo
 # de corrección de nombres.
 
+
+export(universities,"./stores/Nombres_universidades/Universidades.xlsx")
+export(ranking2022,"./stores/Nombres_universidades/Ranking 2022.xlsx")
 
 
 ##3.3 Patentes ----
@@ -396,15 +404,29 @@ H2020_organization$num_coord_FP7[is.na(H2020_organization$num_coord_FP7)] <- 0
 
 
 
+#5.1. Cuenta de patentes por proyecto H2020 ----
 
 
 
+
+#Se calculan el número de participaciones y de coordinaciones en el FP7
+org_particip_FP7 <- FP7_organization %>% 
+  group_by(organisationID) %>% 
+  summarize(num_particip_FP7= sum(role=="participant"),
+            num_coord_FP7 = sum(role=="coordinator"))
+
+
+#5.2. Cuenta de publicaciones por proyecto y tipo H2020 ----
+
+
+
+
+#5.3. Cuenta de otros entregables por proyecto y tipo H2020 ----
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 6. MODELOS DE PREDICCIÓN VARIABLES Y ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 
 
 

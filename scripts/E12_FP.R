@@ -193,97 +193,17 @@ sapply(CWTS_ranking, class)
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 2. EXPLORACIÓN INICIAL DE LOS DATOS ----
+# 2. PREPARACIÓN BASES DE DATOS: INSTITUCIONES ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
-
-# view(train_prop)
-# view(test_prop)
-# 
-# table(train_prop$l3)
-# table(train_prop$property_type)
-# table(train_prop$operation_type)
-# table(train_prop$currency)
-# table(train_prop$ad_type)
-# 
-# 
-# table(test_prop$l3)
-# table(test_prop$property_type)
-# table(test_prop$operation_type)
-# table(test_prop$currency)
-# table(test_prop$ad_type)
-# 
-# 
-# #Exploración de las bases de datos:
-# skim(train_prop)
-# skim(test_prop)
-# 
-# #Comparación de variables (columnas) entre las dos bases de datos:
-# compare_df_cols(train_prop, test_prop)
-# 
-# #Resumen de diferencias
-# all_equal(train_prop, test_prop)
-
-
-orglist <- data.frame(table(H2020_organization$name))
-orgtype <- data.frame(table(H2020_organization$activityType))
-pubtype <- data.frame(table(H2020_publications$isPublishedAs))
-delivtype <- data.frame(table(H2020_deliverables$deliverableType))
-IPRtype <- data.frame(table(H2020_Irps$type))
-
-skim(H2020_project)
-
-cols_factor <- c("status","fundingScheme")
-H2020_project[cols_factor] <- lapply(H2020_project[cols_factor], factor)
-sapply(H2020_project, class)
-
-fundingSchemes <- data.frame(table(H2020_project$fundingScheme))
-
-
-#Cuántos proyectos tienen al menos una publicación?
-
-public_proy_tipo <- H2020_publications %>% 
-    group_by(projectID,projectAcronym,isPublishedAs) %>%
-    summarize(num_public=n())
-
-public_proy <- H2020_publications %>% 
-  group_by(projectID,projectAcronym) %>%
-  summarize(num_public=n())
-
-colnames(public_proy) <- c("id","acronym","numPublics")
-
-nrow(H2020_project)
-
-
-H2020_project <- 
-  full_join(H2020_project, public_proy,
-             by = c("id","acronym"))
-
-nrow(H2020_project)
-
-summary(H2020_project$numPublics)
-
-proj_sin_pubs <- subset(H2020_project$numPublics)
-
-proj_sin_pubs <- H2020_project[is.na(H2020_project$numPublics),]
-
-
-
-
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 3. PREPARACIÓN BASES DE DATOS: INSTITUCIONES ----
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-##3.1. Listado único de organizaciones ----
+##2.1. Listado único de organizaciones ----
 
 
 organizations <- distinct(H2020_organization[,3:14])
 
 
 
-##3.2 Ranking ----
+##2.2 Ranking ----
 
 ranking2022 <- CWTS_ranking[CWTS_ranking$Period=="2017–2020" & 
                               CWTS_ranking$Field =="All sciences" &
@@ -328,13 +248,13 @@ export(universities,"./stores/Nombres_universidades/Universidades.xlsx")
 export(ranking2022,"./stores/Nombres_universidades/Ranking 2022.xlsx")
 
 
-##3.3 Patentes ----
+##2.3 Patentes ----
 
 #Puede ser complejo sacar la info de la OCDE por los nombres
 #Idea de Proxy: patentes en todos los FP anteriores
 
 
-#3.4 Experiencia previa en FP7 ----
+#2.4 Experiencia previa en FP7 ----
 
 
 skim(H2020_organization)
@@ -362,12 +282,12 @@ H2020_organization$num_coord_FP7[is.na(H2020_organization$num_coord_FP7)] <- 0
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 4. PREPARACIÓN BASES DE DATOS: CONSORCIOS ----
+# 3. PREPARACIÓN BASES DE DATOS: CONSORCIOS ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
-#4.1. Tamaño del consorcio ----
+#3.1. Tamaño del consorcio ----
 
 
 tamano_consorc <- H2020_organization %>% 
@@ -393,7 +313,7 @@ rm(tamano_consorc)
 
 
 
-#4.2. Proporción por tipos de organización ----
+#3.2. Proporción por tipos de organización ----
 
 
 sum(is.na(H2020_organization$activityType))
@@ -437,12 +357,12 @@ H2020_project$share_compan <- H2020_project$numPartnPRC / H2020_project$consorc_
   
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 5. PREPARACIÓN BASES DE DATOS: PROYECTOS ----
+# 4. PREPARACIÓN BASES DE DATOS: PROYECTOS ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
-#5.1. Cuenta de patentes por proyecto H2020 ----
+#4.1. Cuenta de patentes por proyecto H2020 ----
 
 
 colnames(H2020_Irps)
@@ -471,16 +391,72 @@ rm(patentes_proy_H2020)
 H2020_project$num_patentes[is.na(H2020_project$num_patentes)] <- 0
 
 
-#5.2. Cuenta de publicaciones por proyecto y tipo H2020 ----
+
+#4.2. Cuenta de publicaciones por proyecto y tipo H2020 ----
+
+
+colnames(H2020_publications)
+table(H2020_publications$isPublishedAs)
+
+
+#Se calcula el número de patentes por proyecto H2020
+public_proy_H2020 <- H2020_publications %>% 
+  group_by(projectID,isPublishedAs) %>% 
+  summarize(num_public = n())
+
+
+colnames(public_proy_H2020) <- c("id","publicationType","numPublic")
+
+class(public_proy_H2020$id) <- "character"
+
+#Se codifican los tipos de publicación
+
+public_proy_H2020$publicationType <- case_when(
+  public_proy_H2020$publicationType == "Book chapters" ~ "BookChapt",
+  public_proy_H2020$publicationType == "Conference proceedings" ~ "ConfProceed",
+  public_proy_H2020$publicationType == "Monographic books" ~ "Books",
+  public_proy_H2020$publicationType == "Non-peer reviewed articles" ~ "non-peerArticle",
+  public_proy_H2020$publicationType == "Other" ~ "Other",
+  public_proy_H2020$publicationType == "Peer reviewed articles" ~ "peerArticle",
+  public_proy_H2020$publicationType == "Thesis dissertations" ~ "ThesisDiss")
+
+
+#Se cambia la estructura de filas a columnas ("wider") para agregarla a la base:
+
+public_proy_H2020_w <- pivot_wider(public_proy_H2020, 
+                                      names_from = publicationType,
+                                      names_prefix = "NPub_",
+                                      values_from = numPublic)
+
+#Se cambian los NA por 0
+colSums(is.na(public_proy_H2020_w))
+public_proy_H2020_w[is.na(public_proy_H2020_w)] <- 0
+
+
+#Se hace el join con la base de proyectos:
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,public_proy_H2020_w,by="id")
+nrow(H2020_project)
+colSums(is.na(H2020_project))
+
+colnames(H2020_project)
+
+#Se cambian los NA por 0
+H2020_project <- H2020_project %>% 
+  mutate_at(c(29:35), ~replace_na(.,0))
+
+#Total de publicaciones por proyecto:
+
+H2020_project$NPub_total <- rowSums(H2020_project[,c(29:35)])
 
 
 
 
-#5.3. Cuenta de otros entregables por proyecto y tipo H2020 ----
+#4.3. Cuenta de otros entregables por proyecto y tipo H2020 ----
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 6. MODELOS DE PREDICCIÓN VARIABLES Y ----
+# 5. MODELOS DE PREDICCIÓN VARIABLES Y ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -488,7 +464,7 @@ H2020_project$num_patentes[is.na(H2020_project$num_patentes)] <- 0
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 7. CÁLCULO ÍNDICE AGREGADO ----
+# 6. CÁLCULO ÍNDICE AGREGADO ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -496,7 +472,7 @@ H2020_project$num_patentes[is.na(H2020_project$num_patentes)] <- 0
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 8. CLASIFICACIÓN ----
+# 7. CLASIFICACIÓN ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

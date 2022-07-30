@@ -480,7 +480,7 @@ rm(tipos_paises_consorc)
 ## 3.4. Visibilidad y centralidad del consorcio (degree / eigenvector) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-##EJEMPLOS----
+##Tutorial----
 
 install.packages("igraph", dependencies=TRUE)
 library(igraph)
@@ -560,27 +560,35 @@ plot(g4)
 tkplot(g4)
 rglplot(g4, layout=layout.fruchterman.reingold(g, dim=3))
 
-##base intento----
+##Leer la base----
 setwd("~/GitHub/MECA_BD_Final_project")
 
 prueba <-readRDS("./stores/H2020_orgs.rds") #174.005 Obs 29 var
 
 
-##Prueba dos: Grafo de relaciones en Londres----
+## Degree / Eigenvector----
 library(dplyr)
 
-prueba <- prueba %>% filter(city=='LONDON')
+# Identificamos cuántos cores tiene nuestra máquina
+n_cores <- detectCores()
+cl <- makePSOCKcluster(14) 
+registerDoParallel(cl)
+
+# Filtro de prueba para ver solo UK
+# prueba <- prueba %>% filter(country=='UK')
+
 prueba2 <- prueba %>% inner_join(prueba, by="projectID")
 prueba2 <- prueba2 %>% filter(organisationID.x!=organisationID.y)
-relationships <- prueba2 %>% select(to=organisationID.x, from=organisationID.y)
+relationships <- prueba2 %>% dplyr::select(to=organisationID.x, from=organisationID.y)
 
-orgs <- prueba %>% distinct(organisationID, shortName, activityType)
+orgs <- prueba2 %>% distinct(organisationID.x, shortName.x, activityType.x)
+orgs <- orgs %>% dplyr::select(organisationID=organisationID.x,
+               shortName=shortName.x,
+               activityType=activityType.x)
 
 gpruebados <- graph.data.frame(relationships, directed=FALSE, vertices=orgs)
 
-plot(gpruebados, vertex.label=NA)
-
-deg <- degree(gpruebados)            # Degree centrality
+deg <- degree(gpruebados, mode="all")            # Degree centrality
 
 clo <- closeness(gpruebados)         # Closeness centrality
 
@@ -588,11 +596,21 @@ bet <- betweenness(gpruebados)       # Betweenness centrality
 
 eig <- evcent(gpruebados)$vector     # Eigenvector centrality
 
+# intentos de gráfica 1 y 2
+# plot(gpruebados, vertex.label=NA, vertex.size=deg*2)
+# plot(gpruebados, vertex.label=NA, vertex.size=5, layout=layout_with_fr,)
+plot(gpruebados, vertex.label=NA, vertex.size=5)
+
+
 name <- get.vertex.attribute(gpruebados, "shortName")
 
 table <- cbind(name, deg, clo, bet, eig)
 
 table
+
+library(tibble)
+
+rowtable <- table %>% as.data.frame() %>% tibble::rownames_to_column("organisationID")
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 3.5. Experiencia de trabajo previo ("familiaridad") del consorcio ----

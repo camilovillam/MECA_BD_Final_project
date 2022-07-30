@@ -68,8 +68,8 @@ filenames <- list.files("./stores/EU_research_projects/H2020_projects", pattern=
 filenames
 
 
-H2020_euroSciVoc <-     import(filenames[1])
-H2020_legalBasis <-     import(filenames[2])
+#H2020_euroSciVoc <-     import(filenames[1])
+#H2020_legalBasis <-     import(filenames[2])
 H2020_organization <-   import(filenames[3])
 H2020_programme <-      import(filenames[4])
 H2020_project <-        import(filenames[5])
@@ -81,10 +81,10 @@ H2020_publications_2 <- import(filenames[10])
 H2020_publications_3 <- import(filenames[11])
 H2020_publications_4 <- import(filenames[12])
 H2020_publications_5 <- import(filenames[13])
-H2020_reportSummaries<- import(filenames[14])
-H2020_topics <-         import(filenames[15])
-H2020_webItem <-        import(filenames[16])
-H2020_webLink <-        import(filenames[17])
+#H2020_reportSummaries<- import(filenames[14])
+#H2020_topics <-         import(filenames[15])
+#H2020_webItem <-        import(filenames[16])
+#H2020_webLink <-        import(filenames[17])
 
 
 
@@ -137,16 +137,16 @@ filenames <- list.files("./stores/EU_research_projects/FP7_projects", pattern="*
 filenames
 
 
-FP7_euroSciVoc <-     import(filenames[1])
-FP7_publications <-   import(filenames[2])
-FP7_legalBasis <-     import(filenames[3])
+#FP7_euroSciVoc <-     import(filenames[1])
+#FP7_publications <-   import(filenames[2])
+#FP7_legalBasis <-     import(filenames[3])
 FP7_organization <-   import(filenames[4])
 FP7_project <-        import(filenames[5])
-FP7_Irps <-           import(filenames[6])
-FP7_reportSummaries<- import(filenames[7])
-FP7_topics <-         import(filenames[8])
-FP7_webItem <-        import(filenames[9])
-FP7_webLink <-        import(filenames[10])
+#FP7_Irps <-           import(filenames[6])
+#FP7_reportSummaries<- import(filenames[7])
+#FP7_topics <-         import(filenames[8])
+#FP7_webItem <-        import(filenames[9])
+#FP7_webLink <-        import(filenames[10])
 
 
 sapply(FP7_publications, class)
@@ -257,7 +257,7 @@ export(ranking2022,"./stores/Nombres_universidades/Ranking 2022.xlsx")
 ##2.4 Experiencia previa en FP7 ----
 
 
-skim(H2020_organization)
+#skim(H2020_organization)
 table(H2020_organization$role)
 table(FP7_organization$role)
 
@@ -357,6 +357,98 @@ rm(tipos_socios_consorc_w)
 
 
 
+##3.3. Características de países representados ----
+
+cordis_countries <- cordis_countries[cordis_countries$language=="en",]
+
+EU_13 <- c(
+  "Bulgaria",
+  "Croatia",
+  "Cyprus",
+  "Czechia",
+  "Estonia",
+  "Hungary",
+  "Latvia",
+  "Lithuania",
+  "Malta",
+  "Poland",
+  "Romania",
+  "Slovakia",
+  "Slovenia")
+
+EU_15 <- c(
+  "Austria",
+  "Belgium",
+  "Denmark",
+  "Finland",
+  "France",
+  "Germany", 
+  "Greece",
+  "Ireland",
+  "Italy",
+  "Luxembourg",
+  "Netherlands",
+  "Portugal",
+  "Spain",
+  "Sweden",
+  "United Kingdom")
+
+
+cordis_countries$country_cat <- case_when(
+  cordis_countries$name %in% EU_13 ~ "EU13",
+  cordis_countries$name %in% EU_15 ~ "EU15",
+  TRUE ~ "NonEU"
+)
+
+table(cordis_countries$country_cat)
+
+colnames(cordis_countries) <- c("country",
+                                "isoCode",
+                                "country_name",
+                                "language",
+                                "country_cat")
+
+#Se hace un join con la tabla de organizaciones para añadirle esta información
+H2020_organization <- left_join(H2020_organization,
+                                cordis_countries[,c("country","country_name","country_cat")],
+                                by="country")
+
+
+#Se hacen las cuentas agregadas según la categoría de país (EU13 / EU15 / Non-EU)
+
+tipos_paises_consorc <- H2020_organization %>% 
+  group_by(projectID,country_cat) %>%
+  summarize(cuenta_country_cat=n())
+
+colnames(tipos_paises_consorc) <- c("id","countryCat","cuenta_countryCat")
+nrow(tipos_paises_consorc)
+colSums(is.na(tipos_paises_consorc))
+
+#Se cambia la estructura de filas a columnas para agregarla a la base:
+
+tipos_paises_consorc <- pivot_wider(tipos_paises_consorc, 
+                                      names_from = countryCat,
+                                      names_prefix = "NumPartners_",
+                                      values_from = cuenta_countryCat)
+
+colSums(is.na(tipos_paises_consorc))
+tipos_paises_consorc[is.na(tipos_paises_consorc)] <- 0
+
+colnames(tipos_paises_consorc)
+
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project, tipos_paises_consorc,by="id")
+nrow(H2020_project)
+
+
+H2020_project$share_EU13 <- H2020_project$NumPartners_EU13 / H2020_project$consorc_size
+H2020_project$share_EU15 <- H2020_project$NumPartners_EU15 / H2020_project$consorc_size
+H2020_project$share_nonEU <- H2020_project$NumPartners_NonEU / H2020_project$consorc_size
+
+rm(tipos_paises_consorc)
+
+
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 4. PREPARACIÓN BASES DE DATOS: PROYECTOS ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -445,11 +537,26 @@ colnames(H2020_project)
 
 #Se cambian los NA por 0
 H2020_project <- H2020_project %>% 
-  mutate_at(c(29:35), ~replace_na(.,0))
+  mutate_at(c(
+            "NPub_peerArticle",
+            "NPub_ConfProceed" ,
+            "NPub_Other",
+            "NPub_non-peerArticle",
+            "NPub_ThesisDiss" ,
+            "NPub_Books",
+            "NPub_BookChapt"),
+            ~replace_na(.,0))
 
 #Total de publicaciones por proyecto:
 
-H2020_project$NPub_total <- rowSums(H2020_project[,c(29:35)])
+H2020_project$NPub_total <- rowSums(H2020_project[,c(
+  "NPub_peerArticle",
+  "NPub_ConfProceed" ,
+  "NPub_Other",
+  "NPub_non-peerArticle",
+  "NPub_ThesisDiss" ,
+  "NPub_Books",
+  "NPub_BookChapt")])
 
 rm(public_proy_H2020)
 rm(public_proy_H2020_w)
@@ -506,11 +613,21 @@ colnames(H2020_project)
 
 #Se cambian los NA por 0
 H2020_project <- H2020_project %>% 
-  mutate_at(c(37:41), ~replace_na(.,0))
+  mutate_at(c(
+    "NEntreg_Docs_reports",
+    "NEntreg_Other",
+    "NEntreg_OpenResData"    ,
+    "NEntreg_Websites_videos",
+    "NEntreg_Demos_Prototyp"), ~replace_na(.,0))
 
 #Total de publicaciones por proyecto:
 
-H2020_project$NEntreg_total <- rowSums(H2020_project[,c(37:41)])
+H2020_project$NEntreg_total <- rowSums(H2020_project[,c(
+  "NEntreg_Docs_reports",
+  "NEntreg_Other",
+  "NEntreg_OpenResData"    ,
+  "NEntreg_Websites_videos",
+  "NEntreg_Demos_Prototyp")])
 
 rm(entregabl_proy_H2020)
 rm(entregabl_proy_H2020_w)
@@ -536,16 +653,51 @@ H2020_project$ln_ecMaxContribution <- log(H2020_project$ecMaxContribution)
 H2020_project$EC_cost_share <- H2020_project$ecMaxContribution/H2020_project$totalCost
 
 
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 5. MODELOS DE PREDICCIÓN VARIABLES Y ----
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 6. CÁLCULO ÍNDICE AGREGADO ----
+# 5. UNIÓN FINAL DE BASES DE DATOS ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#Añadir características de organizaciones y consorcios a la base de proyectos
+
+
+#Coordinador
+#Experiencias previas
+#Centralidad y visibilidad del consorcio
+#Experiencia previa individual, agregada
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 6. MODELOS DE PREDICCIÓN VARIABLES Y ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+colnames(H2020_project)
+
+reg1 <- lm(ln_ecMaxContribution ~
+             consorc_size + share_unis + share_resCen + share_compan +
+             share_EU13 + share_EU15 + share_nonEU,
+           data=H2020_project)
+
+
+reg2 <- lm(ecMaxContribution ~
+                         consorc_size + share_unis + share_resCen + share_compan +
+                         share_EU13 + share_EU15 + share_nonEU,
+                       data=H2020_project)
+
+
+reg3 <- lm(totalCost ~
+                           consorc_size + share_unis + share_resCen + share_compan +
+                           share_EU13 + share_EU15 + share_nonEU,
+                         data=H2020_project)
+
+stargazer(reg1,reg2,reg3,type="text")
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 7. CÁLCULO ÍNDICE AGREGADO ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -553,7 +705,7 @@ H2020_project$EC_cost_share <- H2020_project$ecMaxContribution/H2020_project$tot
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 7. CLASIFICACIÓN ----
+# 8. CLASIFICACIÓN ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

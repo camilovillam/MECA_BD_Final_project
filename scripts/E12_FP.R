@@ -68,8 +68,8 @@ filenames <- list.files("./stores/EU_research_projects/H2020_projects", pattern=
 filenames
 
 
-H2020_euroSciVoc <-     import(filenames[1])
-H2020_legalBasis <-     import(filenames[2])
+#H2020_euroSciVoc <-     import(filenames[1])
+#H2020_legalBasis <-     import(filenames[2])
 H2020_organization <-   import(filenames[3])
 H2020_programme <-      import(filenames[4])
 H2020_project <-        import(filenames[5])
@@ -81,10 +81,10 @@ H2020_publications_2 <- import(filenames[10])
 H2020_publications_3 <- import(filenames[11])
 H2020_publications_4 <- import(filenames[12])
 H2020_publications_5 <- import(filenames[13])
-H2020_reportSummaries<- import(filenames[14])
-H2020_topics <-         import(filenames[15])
-H2020_webItem <-        import(filenames[16])
-H2020_webLink <-        import(filenames[17])
+#H2020_reportSummaries<- import(filenames[14])
+#H2020_topics <-         import(filenames[15])
+#H2020_webItem <-        import(filenames[16])
+#H2020_webLink <-        import(filenames[17])
 
 
 
@@ -137,16 +137,16 @@ filenames <- list.files("./stores/EU_research_projects/FP7_projects", pattern="*
 filenames
 
 
-FP7_euroSciVoc <-     import(filenames[1])
-FP7_publications <-   import(filenames[2])
-FP7_legalBasis <-     import(filenames[3])
+#FP7_euroSciVoc <-     import(filenames[1])
+#FP7_publications <-   import(filenames[2])
+#FP7_legalBasis <-     import(filenames[3])
 FP7_organization <-   import(filenames[4])
 FP7_project <-        import(filenames[5])
-FP7_Irps <-           import(filenames[6])
-FP7_reportSummaries<- import(filenames[7])
-FP7_topics <-         import(filenames[8])
-FP7_webItem <-        import(filenames[9])
-FP7_webLink <-        import(filenames[10])
+#FP7_Irps <-           import(filenames[6])
+#FP7_reportSummaries<- import(filenames[7])
+#FP7_topics <-         import(filenames[8])
+#FP7_webItem <-        import(filenames[9])
+#FP7_webLink <-        import(filenames[10])
 
 
 sapply(FP7_publications, class)
@@ -193,139 +193,37 @@ sapply(CWTS_ranking, class)
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 2. EXPLORACIÓN INICIAL DE LOS DATOS ----
+# 2. PREPARACIÓN BASES DE DATOS: INSTITUCIONES ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
-
-# view(train_prop)
-# view(test_prop)
-# 
-# table(train_prop$l3)
-# table(train_prop$property_type)
-# table(train_prop$operation_type)
-# table(train_prop$currency)
-# table(train_prop$ad_type)
-# 
-# 
-# table(test_prop$l3)
-# table(test_prop$property_type)
-# table(test_prop$operation_type)
-# table(test_prop$currency)
-# table(test_prop$ad_type)
-# 
-# 
-# #Exploración de las bases de datos:
-# skim(train_prop)
-# skim(test_prop)
-# 
-# #Comparación de variables (columnas) entre las dos bases de datos:
-# compare_df_cols(train_prop, test_prop)
-# 
-# #Resumen de diferencias
-# all_equal(train_prop, test_prop)
-
-
-orglist <- data.frame(table(H2020_organization$name))
-orgtype <- data.frame(table(H2020_organization$activityType))
-pubtype <- data.frame(table(H2020_publications$isPublishedAs))
-delivtype <- data.frame(table(H2020_deliverables$deliverableType))
-IPRtype <- data.frame(table(H2020_Irps$type))
-
-skim(H2020_project)
-
-cols_factor <- c("status","fundingScheme")
-H2020_project[cols_factor] <- lapply(H2020_project[cols_factor], factor)
-sapply(H2020_project, class)
-
-fundingSchemes <- data.frame(table(H2020_project$fundingScheme))
-
-
-#Cuántos proyectos tienen al menos una publicación?
-
-public_proy_tipo <- H2020_publications %>% 
-    group_by(projectID,projectAcronym,isPublishedAs) %>%
-    summarize(num_public=n())
-
-public_proy <- H2020_publications %>% 
-  group_by(projectID,projectAcronym) %>%
-  summarize(num_public=n())
-
-colnames(public_proy) <- c("id","acronym","numPublics")
-
-nrow(H2020_project)
-
-
-H2020_project <- 
-  full_join(H2020_project, public_proy,
-             by = c("id","acronym"))
-
-nrow(H2020_project)
-
-summary(H2020_project$numPublics)
-
-proj_sin_pubs <- subset(H2020_project$numPublics)
-
-proj_sin_pubs <- H2020_project[is.na(H2020_project$numPublics),]
-
-
-
-
-#Número de socios por proyecto:
-
-
-socios_proy_tipo <- H2020_organization %>% 
-  group_by(projectID,projectAcronym,activityType) %>%
-  summarize(num_org=n())
-
-socios_proy <- H2020_organization %>% 
-  group_by(projectID,projectAcronym) %>%
-  summarize(num_org=n())
-
-colnames(socios_proy) <- c("id","acronym","numPartners")
-
-nrow(H2020_project)
-
-H2020_project <- 
-  full_join(H2020_project, socios_proy,
-            by = c("id","acronym"))
-
-nrow(H2020_project)
-
-summary(H2020_project$numPartners)
-
-hist(table(H2020_project$numPartners))
-
-
-
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 3. PREPARACIÓN BASES DE DATOS: INSTITUCIONES ----
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-##3.1. Listado único de organizaciones ----
+##2.1. Listado único de organizaciones ----
 
 
 organizations <- distinct(H2020_organization[,3:14])
 
 
 
-##3.2 Ranking ----
+##2.2 Ranking ----
 
 ranking2022 <- CWTS_ranking[CWTS_ranking$Period=="2017–2020" & 
                               CWTS_ranking$Field =="All sciences" &
                               CWTS_ranking$Frac_counting==1,]
 
 nrow(ranking2022)
-ranking2022_un <- distinct(ranking2022[,1:2])
 
-
+#Ranking con base en el número total de publicaciones:
 ranking2022 <- ranking2022[order(ranking2022$impact_P,decreasing = TRUE),]
 ranking2022 <- ranking2022 %>% mutate(ranking_p= 1:n())
-ranking2022$name <- toupper(ranking2022$University) 
+
+#Ranking con base en el número de publicaciones Top 1%
+ranking2022 <- ranking2022[order(ranking2022$P_top1,decreasing = TRUE),]
+ranking2022 <- ranking2022 %>% mutate(ranking_p_top1= 1:n())
 
 
-organizations_ranking <- left_join(organizations,ranking2022[,c("name","ranking_p")],by="name")
+ranking2022$name <- toupper(ranking2022$University)
+
+
+organizations_ranking <- left_join(organizations,ranking2022[,c("name","ranking_p","ranking_p_top1")],by="name")
 
 universities <- organizations_ranking[organizations_ranking$activityType %in% c("HES"),]
 
@@ -346,16 +244,20 @@ print(paste0("El porcentaje de universidades encontradas es ", round(100 - (3681
 # de corrección de nombres.
 
 
-
-##3.3 Patentes ----
-
-
+export(universities,"./stores/Nombres_universidades/Universidades.xlsx")
+export(ranking2022,"./stores/Nombres_universidades/Ranking 2022.xlsx")
 
 
-#3.4 Experiencia previa en FP7 ----
+##2.3 Patentes ----
+
+#Puede ser complejo sacar la info de la OCDE por los nombres
+#Idea de Proxy: patentes en todos los FP anteriores
 
 
-skim(H2020_organization)
+##2.4 Experiencia previa en FP7 ----
+
+
+#skim(H2020_organization)
 table(H2020_organization$role)
 table(FP7_organization$role)
 
@@ -380,23 +282,390 @@ H2020_organization$num_coord_FP7[is.na(H2020_organization$num_coord_FP7)] <- 0
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 4. PREPARACIÓN BASES DE DATOS: CONSORCIOS ----
+# 3. PREPARACIÓN BASES DE DATOS: CONSORCIOS ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
+##3.1. Tamaño del consorcio ----
 
+
+tamano_consorc <- H2020_organization %>% 
+  group_by(projectID) %>%
+  summarize(consorc_size = n())
+
+tamano_consorc$id <- tamano_consorc$projectID
+class(tamano_consorc$id) <- "character"
+tamano_consorc$projectID <- NULL
+
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,tamano_consorc,by="id")
+nrow(H2020_project)
+
+colSums(is.na(H2020_project))
+
+#Se eliminan pocos registros que quedan con NA:
+nrow(H2020_project)
+H2020_project <- filter(H2020_project,!(is.na(H2020_project$consorc_size)))
+nrow(H2020_project)
+
+rm(tamano_consorc)
+
+
+
+##3.2. Proporción por tipos de organización ----
+
+
+sum(is.na(H2020_organization$activityType))
+table(H2020_organization$activityType)
+
+
+tipos_socios_consorc <- H2020_organization %>% 
+  group_by(projectID,activityType) %>%
+  summarize(numPartners=n())
+
+colnames(tipos_socios_consorc) <- c("id","activityType","numPartners")
+nrow(tipos_socios_consorc)
+colSums(is.na(tipos_socios_consorc))
+
+#Se cambia la estructura de filas a columnas para agregarla a la base:
+
+tipos_socios_consorc_w <- pivot_wider(tipos_socios_consorc, 
+                                      names_from = activityType,
+                                      names_prefix = "numPartn",
+                                      names_sep = "_",
+                                      values_from = numPartners)
+
+colSums(is.na(tipos_socios_consorc_w))
+tipos_socios_consorc_w[is.na(tipos_socios_consorc_w)] <- 0
+
+colnames(tipos_socios_consorc_w)
+
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project, tipos_socios_consorc_w,by="id")
+nrow(H2020_project)
+
+H2020_project[,c("numPartnOTH","numPartnNA","numPartnPUB")] <- list(NULL)
+
+H2020_project$share_unis <- H2020_project$numPartnHES / H2020_project$consorc_size
+H2020_project$share_resCen <- H2020_project$numPartnREC / H2020_project$consorc_size 
+H2020_project$share_compan <- H2020_project$numPartnPRC / H2020_project$consorc_size
+
+
+rm(tipos_socios_consorc)
+rm(tipos_socios_consorc_w)
+
+
+
+##3.3. Características de países representados ----
+
+cordis_countries <- cordis_countries[cordis_countries$language=="en",]
+
+EU_13 <- c(
+  "Bulgaria",
+  "Croatia",
+  "Cyprus",
+  "Czechia",
+  "Estonia",
+  "Hungary",
+  "Latvia",
+  "Lithuania",
+  "Malta",
+  "Poland",
+  "Romania",
+  "Slovakia",
+  "Slovenia")
+
+EU_15 <- c(
+  "Austria",
+  "Belgium",
+  "Denmark",
+  "Finland",
+  "France",
+  "Germany", 
+  "Greece",
+  "Ireland",
+  "Italy",
+  "Luxembourg",
+  "Netherlands",
+  "Portugal",
+  "Spain",
+  "Sweden",
+  "United Kingdom")
+
+
+cordis_countries$country_cat <- case_when(
+  cordis_countries$name %in% EU_13 ~ "EU13",
+  cordis_countries$name %in% EU_15 ~ "EU15",
+  TRUE ~ "NonEU"
+)
+
+table(cordis_countries$country_cat)
+
+colnames(cordis_countries) <- c("country",
+                                "isoCode",
+                                "country_name",
+                                "language",
+                                "country_cat")
+
+#Se hace un join con la tabla de organizaciones para añadirle esta información
+H2020_organization <- left_join(H2020_organization,
+                                cordis_countries[,c("country","country_name","country_cat")],
+                                by="country")
+
+
+#Se hacen las cuentas agregadas según la categoría de país (EU13 / EU15 / Non-EU)
+
+tipos_paises_consorc <- H2020_organization %>% 
+  group_by(projectID,country_cat) %>%
+  summarize(cuenta_country_cat=n())
+
+colnames(tipos_paises_consorc) <- c("id","countryCat","cuenta_countryCat")
+nrow(tipos_paises_consorc)
+colSums(is.na(tipos_paises_consorc))
+
+#Se cambia la estructura de filas a columnas para agregarla a la base:
+
+tipos_paises_consorc <- pivot_wider(tipos_paises_consorc, 
+                                      names_from = countryCat,
+                                      names_prefix = "NumPartners_",
+                                      values_from = cuenta_countryCat)
+
+colSums(is.na(tipos_paises_consorc))
+tipos_paises_consorc[is.na(tipos_paises_consorc)] <- 0
+
+colnames(tipos_paises_consorc)
+
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project, tipos_paises_consorc,by="id")
+nrow(H2020_project)
+
+
+H2020_project$share_EU13 <- H2020_project$NumPartners_EU13 / H2020_project$consorc_size
+H2020_project$share_EU15 <- H2020_project$NumPartners_EU15 / H2020_project$consorc_size
+H2020_project$share_nonEU <- H2020_project$NumPartners_NonEU / H2020_project$consorc_size
+
+rm(tipos_paises_consorc)
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 4. PREPARACIÓN BASES DE DATOS: PROYECTOS ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+##4.1. Cuenta de patentes por proyecto H2020 ----
+
+
+colnames(H2020_Irps)
+table(H2020_Irps$awardKind)
+
+
+#Se calcula el número de patentes por proyecto H2020
+patentes_proy_H2020 <- H2020_Irps %>% 
+  group_by(projectID) %>% 
+  summarize(num_patentes = n())
+
+patentes_proy_H2020$id <- patentes_proy_H2020$projectID
+class(patentes_proy_H2020$id) <- "character"
+patentes_proy_H2020$projectID <- NULL
+
+
+
+#Se une con la base de proyectos H2020
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,patentes_proy_H2020,by="id")
+nrow(H2020_project)
+
+rm(patentes_proy_H2020)
+
+#A los que quedan con NA se les imputa 0 patentes
+H2020_project$num_patentes[is.na(H2020_project$num_patentes)] <- 0
+
+
+
+##4.2. Cuenta de publicaciones por proyecto y tipo H2020 ----
+
+
+colnames(H2020_publications)
+table(H2020_publications$isPublishedAs)
+
+
+#Se calcula el número de publicaciones por proyecto y tipo H2020
+public_proy_H2020 <- H2020_publications %>% 
+  group_by(projectID,isPublishedAs) %>% 
+  summarize(num_public = n())
+
+
+#Se ajustan los nombres y clases de columna
+colnames(public_proy_H2020) <- c("id","publicationType","numPublic")
+class(public_proy_H2020$id) <- "character"
+
+
+#Se codifican los tipos de publicación
+
+public_proy_H2020$publicationType <- case_when(
+  public_proy_H2020$publicationType == "Book chapters" ~ "BookChapt",
+  public_proy_H2020$publicationType == "Conference proceedings" ~ "ConfProceed",
+  public_proy_H2020$publicationType == "Monographic books" ~ "Books",
+  public_proy_H2020$publicationType == "Non-peer reviewed articles" ~ "non-peerArticle",
+  public_proy_H2020$publicationType == "Other" ~ "Other",
+  public_proy_H2020$publicationType == "Peer reviewed articles" ~ "peerArticle",
+  public_proy_H2020$publicationType == "Thesis dissertations" ~ "ThesisDiss")
+
+
+#Se cambia la estructura de filas a columnas ("wider") para agregarla a la base:
+
+public_proy_H2020_w <- pivot_wider(public_proy_H2020, 
+                                      names_from = publicationType,
+                                      names_prefix = "NPub_",
+                                      values_from = numPublic)
+
+#Se cambian los NA por 0
+colSums(is.na(public_proy_H2020_w))
+public_proy_H2020_w[is.na(public_proy_H2020_w)] <- 0
+
+
+#Se hace el join con la base de proyectos:
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,public_proy_H2020_w,by="id")
+nrow(H2020_project)
+colSums(is.na(H2020_project))
+
+colnames(H2020_project)
+
+#Se cambian los NA por 0
+H2020_project <- H2020_project %>% 
+  mutate_at(c(
+            "NPub_peerArticle",
+            "NPub_ConfProceed" ,
+            "NPub_Other",
+            "NPub_non-peerArticle",
+            "NPub_ThesisDiss" ,
+            "NPub_Books",
+            "NPub_BookChapt"),
+            ~replace_na(.,0))
+
+#Total de publicaciones por proyecto:
+
+H2020_project$NPub_total <- rowSums(H2020_project[,c(
+  "NPub_peerArticle",
+  "NPub_ConfProceed" ,
+  "NPub_Other",
+  "NPub_non-peerArticle",
+  "NPub_ThesisDiss" ,
+  "NPub_Books",
+  "NPub_BookChapt")])
+
+rm(public_proy_H2020)
+rm(public_proy_H2020_w)
+
+
+
+##4.3. Cuenta de otros entregables por proyecto y tipo H2020 ----
+
+colnames(H2020_deliverables)
+table(H2020_deliverables$deliverableType)
+
+
+#Se calcula el número de entregables por proyecto y tipo H2020
+entregabl_proy_H2020 <- H2020_deliverables %>% 
+  group_by(projectID,deliverableType) %>% 
+  summarize(num_entregabl = n())
+
+#Se ajustan los nombres y clases de columna
+colnames(entregabl_proy_H2020) <- c("id","deliverableType","numEntregabl")
+class(entregabl_proy_H2020$id) <- "character"
+
+
+#Se codifican los tipos de entregables
+
+table(entregabl_proy_H2020$deliverableType)
+
+entregabl_proy_H2020$deliverableType <- case_when(
+  entregabl_proy_H2020$deliverableType == "Demonstrators, pilots, prototypes" ~ "Demos_Prototyp",
+  entregabl_proy_H2020$deliverableType == "Documents, reports" ~ "Docs_reports",
+  entregabl_proy_H2020$deliverableType == "Open Research Data Pilot" ~ "OpenResData",
+  entregabl_proy_H2020$deliverableType == "Other" ~ "Other",
+  entregabl_proy_H2020$deliverableType == "Websites, patent fillings, videos etc." ~ "Websites_videos")
+
+
+#Se cambia la estructura de filas a columnas ("wider") para agregarla a la base:
+
+entregabl_proy_H2020_w <- pivot_wider(entregabl_proy_H2020, 
+                                   names_from = deliverableType,
+                                   names_prefix = "NEntreg_",
+                                   values_from = numEntregabl)
+
+#Se cambian los NA por 0
+colSums(is.na(entregabl_proy_H2020_w))
+entregabl_proy_H2020_w[is.na(entregabl_proy_H2020_w)] <- 0
+
+
+#Se hace el join con la base de proyectos:
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,entregabl_proy_H2020_w,by="id")
+nrow(H2020_project)
+colSums(is.na(H2020_project))
+
+colnames(H2020_project)
+
+#Se cambian los NA por 0
+H2020_project <- H2020_project %>% 
+  mutate_at(c(
+    "NEntreg_Docs_reports",
+    "NEntreg_Other",
+    "NEntreg_OpenResData"    ,
+    "NEntreg_Websites_videos",
+    "NEntreg_Demos_Prototyp"), ~replace_na(.,0))
+
+#Total de publicaciones por proyecto:
+
+H2020_project$NEntreg_total <- rowSums(H2020_project[,c(
+  "NEntreg_Docs_reports",
+  "NEntreg_Other",
+  "NEntreg_OpenResData"    ,
+  "NEntreg_Websites_videos",
+  "NEntreg_Demos_Prototyp")])
+
+rm(entregabl_proy_H2020)
+rm(entregabl_proy_H2020_w)
+
+
+
+
+##4.4. Recursos del proyecto ----
+
+class(H2020_project$totalCost)
+class(H2020_project$ecMaxContribution)
+
+H2020_project$totalCost <- gsub(",","\\.",H2020_project$totalCost)
+H2020_project$ecMaxContribution <- gsub(",","\\.",H2020_project$ecMaxContribution)
+
+
+class(H2020_project$totalCost) <- "numeric"
+class(H2020_project$ecMaxContribution) <- "numeric"
+
+H2020_project$ln_totalCost <- log(H2020_project$totalCost)
+H2020_project$ln_ecMaxContribution <- log(H2020_project$ecMaxContribution)
+
+H2020_project$EC_cost_share <- H2020_project$ecMaxContribution/H2020_project$totalCost
 
 
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 5. PREPARACIÓN BASES DE DATOS: PROYECTOS ----
+# 5. UNIÓN FINAL DE BASES DE DATOS ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#Añadir características de organizaciones y consorcios a la base de proyectos
 
 
-
+#Coordinador
+#Experiencias previas
+#Centralidad y visibilidad del consorcio
+#Experiencia previa individual, agregada
 
 
 
@@ -405,9 +674,26 @@ H2020_organization$num_coord_FP7[is.na(H2020_organization$num_coord_FP7)] <- 0
 # 6. MODELOS DE PREDICCIÓN VARIABLES Y ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+colnames(H2020_project)
+
+reg1 <- lm(ln_ecMaxContribution ~
+             consorc_size + share_unis + share_resCen + share_compan +
+             share_EU13 + share_EU15 + share_nonEU,
+           data=H2020_project)
 
 
+reg2 <- lm(ecMaxContribution ~
+                         consorc_size + share_unis + share_resCen + share_compan +
+                         share_EU13 + share_EU15 + share_nonEU,
+                       data=H2020_project)
 
+
+reg3 <- lm(totalCost ~
+                           consorc_size + share_unis + share_resCen + share_compan +
+                           share_EU13 + share_EU15 + share_nonEU,
+                         data=H2020_project)
+
+stargazer(reg1,reg2,reg3,type="text")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

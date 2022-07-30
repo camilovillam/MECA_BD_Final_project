@@ -254,7 +254,7 @@ export(ranking2022,"./stores/Nombres_universidades/Ranking 2022.xlsx")
 #Idea de Proxy: patentes en todos los FP anteriores
 
 
-#2.4 Experiencia previa en FP7 ----
+##2.4 Experiencia previa en FP7 ----
 
 
 skim(H2020_organization)
@@ -287,7 +287,7 @@ H2020_organization$num_coord_FP7[is.na(H2020_organization$num_coord_FP7)] <- 0
 
 
 
-#3.1. Tamaño del consorcio ----
+##3.1. Tamaño del consorcio ----
 
 
 tamano_consorc <- H2020_organization %>% 
@@ -313,7 +313,7 @@ rm(tamano_consorc)
 
 
 
-#3.2. Proporción por tipos de organización ----
+##3.2. Proporción por tipos de organización ----
 
 
 sum(is.na(H2020_organization$activityType))
@@ -352,9 +352,10 @@ H2020_project$share_resCen <- H2020_project$numPartnREC / H2020_project$consorc_
 H2020_project$share_compan <- H2020_project$numPartnPRC / H2020_project$consorc_size
 
 
+rm(tipos_socios_consorc)
+rm(tipos_socios_consorc_w)
 
 
-  
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 4. PREPARACIÓN BASES DE DATOS: PROYECTOS ----
@@ -362,7 +363,7 @@ H2020_project$share_compan <- H2020_project$numPartnPRC / H2020_project$consorc_
 
 
 
-#4.1. Cuenta de patentes por proyecto H2020 ----
+##4.1. Cuenta de patentes por proyecto H2020 ----
 
 
 colnames(H2020_Irps)
@@ -392,22 +393,23 @@ H2020_project$num_patentes[is.na(H2020_project$num_patentes)] <- 0
 
 
 
-#4.2. Cuenta de publicaciones por proyecto y tipo H2020 ----
+##4.2. Cuenta de publicaciones por proyecto y tipo H2020 ----
 
 
 colnames(H2020_publications)
 table(H2020_publications$isPublishedAs)
 
 
-#Se calcula el número de patentes por proyecto H2020
+#Se calcula el número de publicaciones por proyecto y tipo H2020
 public_proy_H2020 <- H2020_publications %>% 
   group_by(projectID,isPublishedAs) %>% 
   summarize(num_public = n())
 
 
+#Se ajustan los nombres y clases de columna
 colnames(public_proy_H2020) <- c("id","publicationType","numPublic")
-
 class(public_proy_H2020$id) <- "character"
+
 
 #Se codifican los tipos de publicación
 
@@ -449,10 +451,89 @@ H2020_project <- H2020_project %>%
 
 H2020_project$NPub_total <- rowSums(H2020_project[,c(29:35)])
 
+rm(public_proy_H2020)
+rm(public_proy_H2020_w)
 
 
 
-#4.3. Cuenta de otros entregables por proyecto y tipo H2020 ----
+##4.3. Cuenta de otros entregables por proyecto y tipo H2020 ----
+
+colnames(H2020_deliverables)
+table(H2020_deliverables$deliverableType)
+
+
+#Se calcula el número de entregables por proyecto y tipo H2020
+entregabl_proy_H2020 <- H2020_deliverables %>% 
+  group_by(projectID,deliverableType) %>% 
+  summarize(num_entregabl = n())
+
+#Se ajustan los nombres y clases de columna
+colnames(entregabl_proy_H2020) <- c("id","deliverableType","numEntregabl")
+class(entregabl_proy_H2020$id) <- "character"
+
+
+#Se codifican los tipos de entregables
+
+table(entregabl_proy_H2020$deliverableType)
+
+entregabl_proy_H2020$deliverableType <- case_when(
+  entregabl_proy_H2020$deliverableType == "Demonstrators, pilots, prototypes" ~ "Demos_Prototyp",
+  entregabl_proy_H2020$deliverableType == "Documents, reports" ~ "Docs_reports",
+  entregabl_proy_H2020$deliverableType == "Open Research Data Pilot" ~ "OpenResData",
+  entregabl_proy_H2020$deliverableType == "Other" ~ "Other",
+  entregabl_proy_H2020$deliverableType == "Websites, patent fillings, videos etc." ~ "Websites_videos")
+
+
+#Se cambia la estructura de filas a columnas ("wider") para agregarla a la base:
+
+entregabl_proy_H2020_w <- pivot_wider(entregabl_proy_H2020, 
+                                   names_from = deliverableType,
+                                   names_prefix = "NEntreg_",
+                                   values_from = numEntregabl)
+
+#Se cambian los NA por 0
+colSums(is.na(entregabl_proy_H2020_w))
+entregabl_proy_H2020_w[is.na(entregabl_proy_H2020_w)] <- 0
+
+
+#Se hace el join con la base de proyectos:
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,entregabl_proy_H2020_w,by="id")
+nrow(H2020_project)
+colSums(is.na(H2020_project))
+
+colnames(H2020_project)
+
+#Se cambian los NA por 0
+H2020_project <- H2020_project %>% 
+  mutate_at(c(37:41), ~replace_na(.,0))
+
+#Total de publicaciones por proyecto:
+
+H2020_project$NEntreg_total <- rowSums(H2020_project[,c(37:41)])
+
+rm(entregabl_proy_H2020)
+rm(entregabl_proy_H2020_w)
+
+
+
+
+##4.4. Recursos del proyecto ----
+
+class(H2020_project$totalCost)
+class(H2020_project$ecMaxContribution)
+
+H2020_project$totalCost <- gsub(",","\\.",H2020_project$totalCost)
+H2020_project$ecMaxContribution <- gsub(",","\\.",H2020_project$ecMaxContribution)
+
+
+class(H2020_project$totalCost) <- "numeric"
+class(H2020_project$ecMaxContribution) <- "numeric"
+
+H2020_project$ln_totalCost <- log(H2020_project$totalCost)
+H2020_project$ln_ecMaxContribution <- log(H2020_project$ecMaxContribution)
+
+H2020_project$EC_cost_share <- H2020_project$ecMaxContribution/H2020_project$totalCost
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

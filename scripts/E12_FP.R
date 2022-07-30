@@ -480,7 +480,7 @@ rm(tipos_paises_consorc)
 ## 3.4. Visibilidad y centralidad del consorcio (degree / eigenvector) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-##EJEMPLOS----g4
+##EJEMPLOS----
 
 install.packages("igraph", dependencies=TRUE)
 library(igraph)
@@ -559,6 +559,12 @@ getwd()
 plot(g4) 
 tkplot(g4)
 rglplot(g4, layout=layout.fruchterman.reingold(g, dim=3))
+
+##base intento----
+setwd("~/GitHub/MECA_BD_Final_project")
+
+prueba <-readRDS("./stores/H2020_orgs.rds") #174.005 Obs 29 var
+
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 3.5. Experiencia de trabajo previo ("familiaridad") del consorcio ----

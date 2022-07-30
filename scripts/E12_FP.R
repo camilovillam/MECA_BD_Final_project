@@ -566,6 +566,34 @@ setwd("~/GitHub/MECA_BD_Final_project")
 prueba <-readRDS("./stores/H2020_orgs.rds") #174.005 Obs 29 var
 
 
+##Prueba dos: Grafo de relaciones en Londres----
+library(dplyr)
+
+prueba <- prueba %>% filter(city=='LONDON')
+prueba2 <- prueba %>% inner_join(prueba, by="projectID")
+prueba2 <- prueba2 %>% filter(organisationID.x!=organisationID.y)
+relationships <- prueba2 %>% select(to=organisationID.x, from=organisationID.y)
+
+orgs <- prueba %>% distinct(organisationID, shortName, activityType)
+
+gpruebados <- graph.data.frame(relationships, directed=FALSE, vertices=orgs)
+
+plot(gpruebados, vertex.label=NA)
+
+deg <- degree(gpruebados)            # Degree centrality
+
+clo <- closeness(gpruebados)         # Closeness centrality
+
+bet <- betweenness(gpruebados)       # Betweenness centrality
+
+eig <- evcent(gpruebados)$vector     # Eigenvector centrality
+
+name <- get.vertex.attribute(gpruebados, "shortName")
+
+table <- cbind(name, deg, clo, bet, eig)
+
+table
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 3.5. Experiencia de trabajo previo ("familiaridad") del consorcio ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

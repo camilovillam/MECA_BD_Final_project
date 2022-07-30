@@ -54,12 +54,17 @@ p_load(rio,
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
+
 setwd("~/GitHub/MECA_BD_Final_project/")
 
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## 1.1. Bases de datos de proyectos europeos ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 
 ### 1.1.1. Horizon 2020 (H2020) ----
+#++++++++++++++++++++++++++++++++++++
 
 
 #### Importar todos los archivos de Excel del directorio:
@@ -126,6 +131,7 @@ rm(filenames)
 
 
 ### 1.1.2. Framework Programme 7 (FP7)  ----
+#++++++++++++++++++++++++++++++++++++++++++++
 
 
 setwd("~/GitHub/MECA_BD_Final_project/")
@@ -154,6 +160,7 @@ sapply(FP7_publications, class)
 
 
 ### 1.1.3. CORDIS reference data  ----
+#++++++++++++++++++++++++++++++++++++++
 
 #### Importar todos los archivos de Excel del directorio:
 
@@ -168,13 +175,19 @@ cordis_org_activity <-    import(filenames[4])
 cordis_funding_scheme <-  import(filenames[5])
 
 
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## 1.2. Bases de datos de OECD REGPAT (registros de patentes)  ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
 
 
-## 1.3 Base de datos del CWTS Leiden Ranking 2022 (excelencia científica)  ----
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 1.3 Base de datos CWTS Leiden Ranking 2022 (excelencia científica)  ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 setwd("~/GitHub/MECA_BD_Final_project/")
 
@@ -182,7 +195,7 @@ setwd("~/GitHub/MECA_BD_Final_project/")
 #CWTS_ranking <- import("./stores/CWTS_Leiden_Ranking/CWTS Leiden Ranking 2022.xlsx")
 
 #Lo guardo para hacer más óptimo el tamaño
-export(CWTS_ranking,"./stores/CWTS_Leiden_Ranking/CWTS_ranking_2022.rds")
+#export(CWTS_ranking,"./stores/CWTS_Leiden_Ranking/CWTS_ranking_2022.rds")
 
 #Cargo el archivo de ranking desde el .RDS
 CWTS_ranking <- import("./stores/CWTS_Leiden_Ranking/CWTS_ranking_2022.rds")
@@ -196,14 +209,18 @@ sapply(CWTS_ranking, class)
 # 2. PREPARACIÓN BASES DE DATOS: INSTITUCIONES ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-##2.1. Listado único de organizaciones ----
 
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 2.1 Ranking CWTS Leiden 2022 ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+#Listado único de organizaciones
 
 organizations <- distinct(H2020_organization[,3:14])
 
-
-
-##2.2 Ranking ----
+#Del archivo cargado del ranking se deja solo la última versión
 
 ranking2022 <- CWTS_ranking[CWTS_ranking$Period=="2017–2020" & 
                               CWTS_ranking$Field =="All sciences" &
@@ -244,17 +261,26 @@ print(paste0("El porcentaje de universidades encontradas es ", round(100 - (3681
 # de corrección de nombres.
 
 
-export(universities,"./stores/Nombres_universidades/Universidades.xlsx")
-export(ranking2022,"./stores/Nombres_universidades/Ranking 2022.xlsx")
+#export(universities,"./stores/Nombres_universidades/Universidades.xlsx")
+#export(ranking2022,"./stores/Nombres_universidades/Ranking 2022.xlsx")
 
 
-##2.3 Patentes ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 2.2 Patentes ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #Puede ser complejo sacar la info de la OCDE por los nombres
-#Idea de Proxy: patentes en todos los FP anteriores
+#Idea de Proxy: patentes en los FP anteriores
 
 
-##2.4 Experiencia previa en FP7 ----
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 2.3 Experiencia previa en FP7 ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 #skim(H2020_organization)
@@ -286,9 +312,9 @@ H2020_organization$num_coord_FP7[is.na(H2020_organization$num_coord_FP7)] <- 0
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
-
-##3.1. Tamaño del consorcio ----
-
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 3.1. Tamaño del consorcio ----
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 tamano_consorc <- H2020_organization %>% 
   group_by(projectID) %>%
@@ -312,9 +338,9 @@ nrow(H2020_project)
 rm(tamano_consorc)
 
 
-
-##3.2. Proporción por tipos de organización ----
-
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 3.2. Proporción por tipos de organización ----
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 sum(is.na(H2020_organization$activityType))
 table(H2020_organization$activityType)
@@ -356,8 +382,9 @@ rm(tipos_socios_consorc)
 rm(tipos_socios_consorc_w)
 
 
-
-##3.3. Características de países representados ----
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 3.3. Características de países representados ----
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 cordis_countries <- cordis_countries[cordis_countries$language=="en",]
 
@@ -450,12 +477,34 @@ rm(tipos_paises_consorc)
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 3.4. Visibilidad y centralidad del consorcio (degree / eigenvector) ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 3.5. Experiencia de trabajo previo ("familiaridad") del consorcio ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 4. PREPARACIÓN BASES DE DATOS: PROYECTOS ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
-##4.1. Cuenta de patentes por proyecto H2020 ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 4.1. Cuenta de patentes por proyecto H2020 ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 colnames(H2020_Irps)
@@ -485,8 +534,9 @@ H2020_project$num_patentes[is.na(H2020_project$num_patentes)] <- 0
 
 
 
-##4.2. Cuenta de publicaciones por proyecto y tipo H2020 ----
-
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 4.2. Cuenta de publicaciones por proyecto y tipo H2020 ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 colnames(H2020_publications)
 table(H2020_publications$isPublishedAs)
@@ -562,8 +612,10 @@ rm(public_proy_H2020)
 rm(public_proy_H2020_w)
 
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 4.3. Cuenta de otros entregables por proyecto y tipo H2020 ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-##4.3. Cuenta de otros entregables por proyecto y tipo H2020 ----
 
 colnames(H2020_deliverables)
 table(H2020_deliverables$deliverableType)
@@ -634,8 +686,10 @@ rm(entregabl_proy_H2020_w)
 
 
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 4.4. Recursos del proyecto ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-##4.4. Recursos del proyecto ----
 
 class(H2020_project$totalCost)
 class(H2020_project$ecMaxContribution)
@@ -653,6 +707,8 @@ H2020_project$ln_ecMaxContribution <- log(H2020_project$ecMaxContribution)
 H2020_project$EC_cost_share <- H2020_project$ecMaxContribution/H2020_project$totalCost
 
 
+colSums(is.na(H2020_project))
+
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -662,17 +718,63 @@ H2020_project$EC_cost_share <- H2020_project$ecMaxContribution/H2020_project$tot
 #Añadir características de organizaciones y consorcios a la base de proyectos
 
 
-#Coordinador
+#Coordinador (experiencia, país, ranking ,patentes)
+#Ranking, patentes
 #Experiencias previas
 #Centralidad y visibilidad del consorcio
-#Experiencia previa individual, agregada
+#Experiencia previa individual, agregada a nivel de consorcio (suma)
+
+
+
+
+
+
+#TEMPORAL: EXPORTACIÓN PRELIMINAR
+export(H2020_organization,"./stores/H2020_orgs.rds")
+export(H2020_project,"./stores/H2020_projects.rds")
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 6. SIMULACIÓN BASE DE DATOS TEST ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 6.1 Creación de los consorcios aleatorios ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 6. MODELOS DE PREDICCIÓN VARIABLES Y ----
+# 6.2 Enriquecer la información de los consorcios (sección 3) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 7. MODELOS DE REGRESIÓN / ESTIMACIÓN VARIABLES Y ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 7.1 Separación de bases de datos y preparación
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 7.2 Ensayos preliminares
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
 
 colnames(H2020_project)
 
@@ -696,18 +798,71 @@ reg3 <- lm(totalCost ~
 stargazer(reg1,reg2,reg3,type="text")
 
 
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 7. CÁLCULO ÍNDICE AGREGADO ----
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
 
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 8. CLASIFICACIÓN ----
+# 7.3 Modelos: patentes
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 7.4 Modelos: publicaciones
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 7.5 Modelos: otros entregables
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 7.6 Modelos: recursos del proyecto
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 7.7 Modelos: estimación puntaje de calificación
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 8. CÁLCULO ÍNDICE AGREGADO ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 9. CLASIFICACIÓN ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 10. PREDICCIÓN FINAL CON BASE DE TEST ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 

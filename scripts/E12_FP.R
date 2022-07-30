@@ -271,33 +271,6 @@ proj_sin_pubs <- H2020_project[is.na(H2020_project$numPublics),]
 
 
 
-#Número de socios por proyecto:
-
-
-socios_proy_tipo <- H2020_organization %>% 
-  group_by(projectID,projectAcronym,activityType) %>%
-  summarize(num_org=n())
-
-socios_proy <- H2020_organization %>% 
-  group_by(projectID,projectAcronym) %>%
-  summarize(num_org=n())
-
-colnames(socios_proy) <- c("id","acronym","numPartners")
-
-nrow(H2020_project)
-
-H2020_project <- 
-  full_join(H2020_project, socios_proy,
-            by = c("id","acronym"))
-
-nrow(H2020_project)
-
-summary(H2020_project$numPartners)
-
-hist(table(H2020_project$numPartners))
-
-
-
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 3. PREPARACIÓN BASES DE DATOS: INSTITUCIONES ----
@@ -357,7 +330,8 @@ export(ranking2022,"./stores/Nombres_universidades/Ranking 2022.xlsx")
 
 ##3.3 Patentes ----
 
-
+#Puede ser complejo sacar la info de la OCDE por los nombres
+#Idea de Proxy: patentes en todos los FP anteriores
 
 
 #3.4 Experiencia previa en FP7 ----
@@ -393,10 +367,74 @@ H2020_organization$num_coord_FP7[is.na(H2020_organization$num_coord_FP7)] <- 0
 
 
 
+#4.1. Tamaño del consorcio ----
+
+
+tamano_consorc <- H2020_organization %>% 
+  group_by(projectID) %>%
+  summarize(consorc_size = n())
+
+tamano_consorc$id <- tamano_consorc$projectID
+class(tamano_consorc$id) <- "character"
+tamano_consorc$projectID <- NULL
+
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,tamano_consorc,by="id")
+nrow(H2020_project)
+
+colSums(is.na(H2020_project))
+
+#Se eliminan pocos registros que quedan con NA:
+nrow(H2020_project)
+H2020_project <- filter(H2020_project,!(is.na(H2020_project$consorc_size)))
+nrow(H2020_project)
+
+rm(tamano_consorc)
+
+
+
+#4.2. Proporción por tipos de organización ----
+
+
+sum(is.na(H2020_organization$activityType))
+table(H2020_organization$activityType)
+
+
+tipos_socios_consorc <- H2020_organization %>% 
+  group_by(projectID,activityType) %>%
+  summarize(numPartners=n())
+
+colnames(tipos_socios_consorc) <- c("id","activityType","numPartners")
+nrow(tipos_socios_consorc)
+colSums(is.na(tipos_socios_consorc))
+
+#Se cambia la estructura de filas a columnas para agregarla a la base:
+
+tipos_socios_consorc_w <- pivot_wider(tipos_socios_consorc, 
+                                      names_from = activityType,
+                                      names_prefix = "numPartn",
+                                      names_sep = "_",
+                                      values_from = numPartners)
+
+colSums(is.na(tipos_socios_consorc_w))
+tipos_socios_consorc_w[is.na(tipos_socios_consorc_w)] <- 0
+
+colnames(tipos_socios_consorc_w)
+
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project, tipos_socios_consorc_w,by="id")
+nrow(H2020_project)
+
+H2020_project[,c("numPartnOTH","numPartnNA","numPartnPUB")] <- list(NULL)
+
+H2020_project$share_unis <- H2020_project$numPartnHES / H2020_project$consorc_size
+H2020_project$share_resCen <- H2020_project$numPartnREC / H2020_project$consorc_size 
+H2020_project$share_compan <- H2020_project$numPartnPRC / H2020_project$consorc_size
 
 
 
 
+  
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 5. PREPARACIÓN BASES DE DATOS: PROYECTOS ----
@@ -407,13 +445,30 @@ H2020_organization$num_coord_FP7[is.na(H2020_organization$num_coord_FP7)] <- 0
 #5.1. Cuenta de patentes por proyecto H2020 ----
 
 
+colnames(H2020_Irps)
+table(H2020_Irps$awardKind)
 
 
-#Se calculan el número de participaciones y de coordinaciones en el FP7
-org_particip_FP7 <- FP7_organization %>% 
-  group_by(organisationID) %>% 
-  summarize(num_particip_FP7= sum(role=="participant"),
-            num_coord_FP7 = sum(role=="coordinator"))
+#Se calcula el número de patentes por proyecto H2020
+patentes_proy_H2020 <- H2020_Irps %>% 
+  group_by(projectID) %>% 
+  summarize(num_patentes = n())
+
+patentes_proy_H2020$id <- patentes_proy_H2020$projectID
+class(patentes_proy_H2020$id) <- "character"
+patentes_proy_H2020$projectID <- NULL
+
+
+
+#Se une con la base de proyectos H2020
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,patentes_proy_H2020,by="id")
+nrow(H2020_project)
+
+rm(patentes_proy_H2020)
+
+#A los que quedan con NA se les imputa 0 patentes
+H2020_project$num_patentes[is.na(H2020_project$num_patentes)] <- 0
 
 
 #5.2. Cuenta de publicaciones por proyecto y tipo H2020 ----

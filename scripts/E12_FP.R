@@ -480,11 +480,85 @@ rm(tipos_paises_consorc)
 ## 3.4. Visibilidad y centralidad del consorcio (degree / eigenvector) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+##EJEMPLOS----g4
+
+install.packages("igraph", dependencies=TRUE)
+library(igraph)
+
+set.seed(8675309)
+
+g <- sample_pa(50)
+plot(g)
+
+g1 <- growing.random.game(50, m=2)
+g1 <- simplify(g1) # "Simplify" removes loops and multiple edges.
+plot(g1)
+
+g2 <- erdos.renyi.game(50, 5/50)
+degree_distribution(g2)
+plot(g2)
+
+#Remember, the degree of each node is just a count of how many edges attach to it. 
+#The distribution of the degree measure is a record of how frequently each To see 
+#the same information graphically, try displaying it as a histogram.
+hist(degree.distribution(g2))
+
+#el <- read.table(file.choose(), sep=",")) # Read in the table
+#el <- as.matrix(el) 
+el <- as.matrix(read.table(file.choose(), sep=",")) # Load your edgelist as a two column matrix.
+g3 <- graph.edgelist(el, directed=TRUE)    # Convert it into an igraph object.
+plot(g3)
+V(g3)$name
+
+fix(g3) # Use caution. It can cause grief if you change anything manually.
+print(g3, e=TRUE, v=TRUE)
+plot(g3)
+plot(g3, edge.width=E(g)$weight) # To plot using edge weights
 
 
+actors <- data.frame(name=c("Alice", "Bob", "Cecil", "David", "Esmeralda"),
+                     age=c(48,33,45,34,21),
+                     gender=c("F","M","F","M","F"))
 
+relations <- data.frame(from=c("Bob", "Cecil", "Cecil", "David", "David", "Esmeralda"),
+                        to=c("Alice", "Bob", "Alice", "Alice", "Bob", "Alice"),
+                        same.dept=c(FALSE,FALSE,TRUE,FALSE,FALSE,TRUE),
+                        friendship=c(4,5,5,2,1,1), 
+                        advice=c(4,5,5,4,2,3))
 
+g4 <- graph.data.frame(relations, directed=TRUE, vertices=actors)
+plot(g4)
 
+deg <- degree(g4)            # Degree centrality
+
+clo <- closeness(g4)         # Closeness centrality
+
+bet <- betweenness(g4)       # Betweenness centrality
+
+eig <- evcent(g4)$vector     # Eigenvector centrality
+
+name <- get.vertex.attribute(g4, "name")
+
+table <- cbind(name, deg, clo, bet, eig)
+                    
+table
+
+hist(degree.distribution(g4)) 
+
+object.name <- cbind(V(g4)$id, deg, clo, bet, eig)
+write.csv(object.name, file=paste("centrality.csv", sep=","))
+
+# First, merge vectors into table, store as 'cent'
+cent <- cbind(deg, clo, bet, eig)
+
+# Next, save them as a .csv file.
+write.csv(cent, file="Centrality.csv") # You may want to choose a working directory first.
+# If you need to find out where it went, use: getwd()  
+getwd()  
+
+plot(g4) 
+tkplot(g4)
+rglplot(g4, layout=layout.fruchterman.reingold(g, dim=3))
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 3.5. Experiencia de trabajo previo ("familiaridad") del consorcio ----

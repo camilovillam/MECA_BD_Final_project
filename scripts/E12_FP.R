@@ -612,8 +612,238 @@ rm(tipos_paises_consorc)
 ## 3.4. Visibilidad y centralidad del consorcio (degree / eigenvector) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+##Tutorial----
+
+install.packages("igraph", dependencies=TRUE)
+library(igraph)
+
+set.seed(8675309)
+
+g <- sample_pa(50)
+plot(g)
+
+g1 <- growing.random.game(50, m=2)
+g1 <- simplify(g1) # "Simplify" removes loops and multiple edges.
+plot(g1)
+
+g2 <- erdos.renyi.game(50, 5/50)
+degree_distribution(g2)
+plot(g2)
+
+#Remember, the degree of each node is just a count of how many edges attach to it. 
+#The distribution of the degree measure is a record of how frequently each To see 
+#the same information graphically, try displaying it as a histogram.
+hist(degree.distribution(g2))
+
+#el <- read.table(file.choose(), sep=",")) # Read in the table
+#el <- as.matrix(el) 
+el <- as.matrix(read.table(file.choose(), sep=",")) # Load your edgelist as a two column matrix.
+g3 <- graph.edgelist(el, directed=TRUE)    # Convert it into an igraph object.
+plot(g3)
+V(g3)$name
+
+fix(g3) # Use caution. It can cause grief if you change anything manually.
+print(g3, e=TRUE, v=TRUE)
+plot(g3)
+plot(g3, edge.width=E(g)$weight) # To plot using edge weights
 
 
+actors <- data.frame(name=c("Alice", "Bob", "Cecil", "David", "Esmeralda"),
+                     age=c(48,33,45,34,21),
+                     gender=c("F","M","F","M","F"))
+
+relations <- data.frame(from=c("Bob", "Cecil", "Cecil", "David", "David", "Esmeralda"),
+                        to=c("Alice", "Bob", "Alice", "Alice", "Bob", "Alice"),
+                        same.dept=c(FALSE,FALSE,TRUE,FALSE,FALSE,TRUE),
+                        friendship=c(4,5,5,2,1,1), 
+                        advice=c(4,5,5,4,2,3))
+
+g4 <- graph.data.frame(relations, directed=TRUE, vertices=actors)
+plot(g4)
+
+deg <- degree(g4)            # Degree centrality
+
+clo <- closeness(g4)         # Closeness centrality
+
+bet <- betweenness(g4)       # Betweenness centrality
+
+eig <- evcent(g4)$vector     # Eigenvector centrality
+
+name <- get.vertex.attribute(g4, "name")
+
+table <- cbind(name, deg, clo, bet, eig)
+                    
+table
+
+hist(degree.distribution(g4)) 
+
+object.name <- cbind(V(g4)$id, deg, clo, bet, eig)
+write.csv(object.name, file=paste("centrality.csv", sep=","))
+
+# First, merge vectors into table, store as 'cent'
+cent <- cbind(deg, clo, bet, eig)
+
+# Next, save them as a .csv file.
+write.csv(cent, file="Centrality.csv") # You may want to choose a working directory first.
+# If you need to find out where it went, use: getwd()  
+getwd()  
+
+plot(g4) 
+tkplot(g4)
+rglplot(g4, layout=layout.fruchterman.reingold(g, dim=3))
+
+##Leer la base----
+setwd("~/GitHub/MECA_BD_Final_project")
+
+prueba <-readRDS("./stores/H2020_orgs.rds") #174.005 Obs 29 var
+
+
+## Degree / Eigenvector----
+library(dplyr)
+
+# Identificamos cuántos cores tiene nuestra máquina
+n_cores <- detectCores()
+cl <- makePSOCKcluster(14) 
+registerDoParallel(cl)
+
+# Filtro de prueba para ver solo UK
+# prueba <- prueba %>% filter(country=='UK')
+
+# Se hace join con la misma tabla usando proyectos.
+# Esto hace que se generen tantas filas como relaciones hayan entre
+# organizaciones a través de proyectos.
+prueba2 <- prueba %>% inner_join(prueba, by="projectID")
+
+# Ahora filtramos todas las filas en donde la organización se
+# repite pues no nos interesa tener relaciones cíclicas.
+prueba2 <- prueba2 %>% filter(organisationID.x!=organisationID.y)
+
+# Lo convertimos en el dataframe que espera la librería igraph
+relationships <- prueba2 %>% dplyr::select(to=organisationID.x, from=organisationID.y)
+
+# Ahora extraemos todas las organizaciones que tienen relaciones
+# Para identificar los nodos de una mejor manera de llegar a
+# graficarlos usando labels.
+orgs <- prueba2 %>% distinct(organisationID.x, shortName.x, activityType.x)
+orgs <- orgs %>% dplyr::select(organisationID=organisationID.x,
+               shortName=shortName.x,
+               activityType=activityType.x)
+
+# Creamos el grafo y generamos las nuevas variables.
+gpruebados <- graph.data.frame(relationships, directed=FALSE, vertices=orgs)
+
+deg <- degree(gpruebados, mode="all")            # Degree centrality
+
+clo <- closeness(gpruebados)         # Closeness centrality
+
+bet <- betweenness(gpruebados)       # Betweenness centrality
+
+eig <- evcent(gpruebados)$vector     # Eigenvector centrality
+
+# Intentos de gráfica.
+# Hay demasiada información.
+# plot(gpruebados, vertex.label=NA, vertex.size=deg*2)
+# plot(gpruebados, vertex.label=NA, vertex.size=5, layout=layout_with_fr,)
+# plot(gpruebados, vertex.label=NA, vertex.size=5)
+
+# Crear vector con nombres.
+name <- get.vertex.attribute(gpruebados, "shortName")
+
+# Creación de la tabla(matriz) con nuevas variables.
+table <- cbind(name, deg, clo, bet, eig)
+table
+
+library(tibble)
+
+# Convertir matriz en una tabla y mover los nombres de las filas
+# A una nueva columna.
+rowtable <- table %>% as.data.frame() %>% tibble::rownames_to_column("organisationID")
+
+# Guardamos la nueva tabla.
+saveRDS(rowtable, './stores/tabla_variables_grafo.rds')
+
+##Acquaintance----
+
+setwd("~/GitHub/MECA_BD_Final_project/")
+
+
+#### Importar todos los archivos de Excel del directorio:
+
+filenames <- list.files("./stores/EU_research_projects/FP7_projects", pattern="*.xlsx", full.names=TRUE)
+filenames
+
+
+#FP7_euroSciVoc <-     import(filenames[1])
+#FP7_publications <-   import(filenames[2])
+#FP7_legalBasis <-     import(filenames[3])
+FP7_organization <-   import(filenames[4])
+FP7_project <-        import(filenames[5])
+#FP7_Irps <-           import(filenames[6])
+#FP7_reportSummaries<- import(filenames[7])
+#FP7_topics <-         import(filenames[8])
+#FP7_webItem <-        import(filenames[9])
+#FP7_webLink <-        import(filenames[10])
+
+
+acq <- FP7_organization %>% inner_join(FP7_organization, by="projectID")
+
+# Ahora filtramos todas las filas en donde la organización se
+# repite pues no nos interesa tener relaciones cíclicas.
+acq <- acq %>% filter(organisationID.x!=organisationID.y)
+
+# Lo convertimos en el dataframe que espera la librería igraph
+relationships_acq <- acq %>% dplyr::select(to=organisationID.x, from=organisationID.y)
+
+# Ahora extraemos todas las organizaciones que tienen relaciones
+# Para identificar los nodos de una mejor manera de llegar a
+# graficarlos usando labels.
+orgs_acq <- acq %>% distinct(organisationID.x, shortName.x, activityType.x)
+orgs_acq <- orgs_acq %>% dplyr::select(organisationID=organisationID.x,
+                               shortName=shortName.x,
+                               activityType=activityType.x)
+
+# Creamos el grafo y generamos las nuevas variables.
+g_acq <- graph.data.frame(relationships_acq, directed=FALSE, vertices=orgs_acq)
+
+deg_acq <- degree(g_acq, mode="all")            # Degree centrality
+
+clo_acq <- closeness(g_acq)         # Closeness centrality
+
+bet_acq <- betweenness(g_acq)       # Betweenness centrality
+
+eig_acq <- evcent(g_acq)$vector     # Eigenvector centrality
+
+# Intentos de gráfica.
+# Hay demasiada información.
+# plot(g_acq, vertex.label=NA, vertex.size=deg*2)
+# plot(g_acq, vertex.label=NA, vertex.size=5, layout=layout_with_fr,)
+# plot(g_acq, vertex.label=NA, vertex.size=5)
+
+# Crear vector con nombres.
+name_acq <- get.vertex.attribute(g_acq, "shortName")
+
+# Creación de la tabla(matriz) con nuevas variables.
+table_acq <- cbind(name_acq, deg_acq, clo_acq, bet_acq, eig_acq)
+table_acq
+
+library(tibble)
+
+# Convertir matriz en una tabla y mover los nombres de las filas
+# A una nueva columna.
+rowtable_acq <- table_acq %>% as.data.frame() %>% tibble::rownames_to_column("organisationID")
+
+# Guardamos la nueva tabla.
+saveRDS(rowtable_acq, './stores/prueba_acq.rds')
+
+# Resumen de número de proyectos (Equivalente a número de acquaintances)
+FP7_orgs <- import(filenames[4])
+tablaNumProyectos <- FP7_orgs %>%
+  group_by(organisationID, name, country, city) %>%
+  summarize(numProyectos=n())
+
+saveRDS(tablaNumProyectos, './stores/tabla_num_proyectos.rds')
+
+histogram(tablaNumProyectos$numProyectos)
 
 
 

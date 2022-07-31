@@ -885,14 +885,10 @@ colSums(is.na(H2020_organization))
 # 
 # histogram(tablaNumProyectos$numProyectos)
 
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 3.5. Simulación base Test ----
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-####prueba
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 3.6. Experiencia de trabajo previo ("Acquaintance") del consorcio ----
+# 3.5. Experiencia de trabajo previo ("Acquaintance") del consorcio ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #Acquaintance:

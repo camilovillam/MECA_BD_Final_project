@@ -733,10 +733,11 @@ relationships <- prueba2 %>% dplyr::select(to=organisationID.x, from=organisatio
 # Ahora extraemos todas las organizaciones que tienen relaciones
 # Para identificar los nodos de una mejor manera de llegar a
 # graficarlos usando labels.
-orgs <- prueba2 %>% distinct(organisationID.x, shortName.x, activityType.x)
+orgs <- prueba2 %>% distinct(organisationID.x, shortName.x, activityType.x, country.x)
 orgs <- orgs %>% dplyr::select(organisationID=organisationID.x,
                shortName=shortName.x,
-               activityType=activityType.x)
+               activityType=activityType.x,
+               country=country.x)
 
 # Creamos el grafo y generamos las nuevas variables.
 gpruebados <- graph.data.frame(relationships, directed=FALSE, vertices=orgs)
@@ -1390,7 +1391,24 @@ export(H2020_project,"./stores/H2020_projects.rds")
 # 6.1. Creación de los consorcios aleatorios ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+# Condiciones:
+# 1. Paises europeos
+# 2. Mínimo 3 paises dentro del consorcio no tienen el mismo país
 
+
+# Grupos por país.
+orgs %>% group_by(country)
+
+# Muestras por país.
+new_df <- orgs %>% group_by(country) %>% sample_n(2, replace = TRUE)
+
+# Otros métodos: Usando data.table (no funciona).
+library("data.table")
+new_df <- orgs[, .SD[sample(x = .N, size = 5)], by=col1]
+
+# Otros métodos: Usando plyr (no funciona).
+library("plyr")
+new_df <- ddply(data_frame,.(country),function(x) x[sample(nrow(x),5),])
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

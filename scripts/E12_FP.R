@@ -577,15 +577,27 @@ registerDoParallel(cl)
 # Filtro de prueba para ver solo UK
 # prueba <- prueba %>% filter(country=='UK')
 
+# Se hace join con la misma tabla usando proyectos.
+# Esto hace que se generen tantas filas como relaciones hayan entre
+# organizaciones a través de proyectos.
 prueba2 <- prueba %>% inner_join(prueba, by="projectID")
+
+# Ahora filtramos todas las filas en donde la organización se
+# repite pues no nos interesa tener relaciones cíclicas.
 prueba2 <- prueba2 %>% filter(organisationID.x!=organisationID.y)
+
+# Lo convertimos en el dataframe que espera la librería igraph
 relationships <- prueba2 %>% dplyr::select(to=organisationID.x, from=organisationID.y)
 
+# Ahora extraemos todas las organizaciones que tienen relaciones
+# Para identificar los nodos de una mejor manera de llegar a
+# graficarlos usando labels.
 orgs <- prueba2 %>% distinct(organisationID.x, shortName.x, activityType.x)
 orgs <- orgs %>% dplyr::select(organisationID=organisationID.x,
                shortName=shortName.x,
                activityType=activityType.x)
 
+# Creamos el grafo y generamos las nuevas variables.
 gpruebados <- graph.data.frame(relationships, directed=FALSE, vertices=orgs)
 
 deg <- degree(gpruebados, mode="all")            # Degree centrality
@@ -596,21 +608,27 @@ bet <- betweenness(gpruebados)       # Betweenness centrality
 
 eig <- evcent(gpruebados)$vector     # Eigenvector centrality
 
-# intentos de gráfica 1 y 2
+# Intentos de gráfica.
+# Hay demasiada información.
 # plot(gpruebados, vertex.label=NA, vertex.size=deg*2)
 # plot(gpruebados, vertex.label=NA, vertex.size=5, layout=layout_with_fr,)
-plot(gpruebados, vertex.label=NA, vertex.size=5)
+# plot(gpruebados, vertex.label=NA, vertex.size=5)
 
-
+# Crear vector con nombres.
 name <- get.vertex.attribute(gpruebados, "shortName")
 
+# Creación de la tabla(matriz) con nuevas variables.
 table <- cbind(name, deg, clo, bet, eig)
-
 table
 
 library(tibble)
 
+# Convertir matriz en una tabla y mover los nombres de las filas
+# A una nueva columna.
 rowtable <- table %>% as.data.frame() %>% tibble::rownames_to_column("organisationID")
+
+# Guardamos la nueva tabla.
+saveRDS(rowtable, './stores/tabla_variables_grafo.rds')
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 3.5. Experiencia de trabajo previo ("familiaridad") del consorcio ----

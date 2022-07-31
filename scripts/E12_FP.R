@@ -630,7 +630,6 @@ rowtable <- table %>% as.data.frame() %>% tibble::rownames_to_column("organisati
 # Guardamos la nueva tabla.
 saveRDS(rowtable, './stores/tabla_variables_grafo.rds')
 
-
 ##Acquaintance----
 
 setwd("~/GitHub/MECA_BD_Final_project/")
@@ -667,7 +666,7 @@ relationships_acq <- acq %>% dplyr::select(to=organisationID.x, from=organisatio
 # Para identificar los nodos de una mejor manera de llegar a
 # graficarlos usando labels.
 orgs_acq <- acq %>% distinct(organisationID.x, shortName.x, activityType.x)
-orgs_acq <- orgs %>% dplyr::select(organisationID=organisationID.x,
+orgs_acq <- orgs_acq %>% dplyr::select(organisationID=organisationID.x,
                                shortName=shortName.x,
                                activityType=activityType.x)
 
@@ -704,6 +703,15 @@ rowtable_acq <- table_acq %>% as.data.frame() %>% tibble::rownames_to_column("or
 # Guardamos la nueva tabla.
 saveRDS(rowtable_acq, './stores/prueba_acq.rds')
 
+# Resumen de número de proyectos (Equivalente a número de acquaintances)
+FP7_orgs <- import(filenames[4])
+tablaNumProyectos <- FP7_orgs %>%
+  group_by(organisationID, name, country, city) %>%
+  summarize(numProyectos=n())
+
+saveRDS(tablaNumProyectos, './stores/tabla_num_proyectos.rds')
+
+histogram(tablaNumProyectos$numProyectos)
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 3.5. Experiencia de trabajo previo ("familiaridad") del consorcio ----

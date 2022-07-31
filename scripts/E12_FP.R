@@ -1410,6 +1410,55 @@ new_df <- orgs[, .SD[sample(x = .N, size = 5)], by=col1]
 library("plyr")
 new_df <- ddply(data_frame,.(country),function(x) x[sample(nrow(x),5),])
 
+# For loop con memoria.
+new_df <- data.frame(matrix(ncol = 5, nrow = 0))
+
+# Crear muestra de todo el dataframe para dejarlo desordenado.
+orgs <- orgs[sample(1:nrow(orgs)), ]
+
+#provide column names
+colnames(new_df) <- c('organisationID', 'shortName', 'activityType', 'country', 'consortium')
+
+used <- data.frame(matrix(ncol = 1, nrow = 0))
+colnames(used) <- c('organisationID')
+
+consortiumCounter <- 1
+for (i in 1:nrow(orgs)) {
+  currGroup <- data.frame(matrix(ncol = 4, nrow = 0))
+  colnames(currGroup) <- c('organisationID', 'shortName', 'activityType', 'country')
+  
+  currCountries <- data.frame(matrix(ncol = 1, nrow = 0))
+  colnames(currCountries) <- c('country')
+  
+  currGroup[nrow(currGroup) + 1, ] <- orgs[i,]
+  currCountries[nrow(currCountries) + 1, ] <- orgs[i,4]
+  used[nrow(used) + 1, ] <- orgs[i,1]
+  for (j in i:nrow(orgs)) {
+    if (orgs[j,4] %in% currCountries || orgs[j,1] %in% used) {
+      next
+    }
+    currGroup[nrow(currGroup) + 1, ] <- orgs[j,]
+    currCountries[nrow(currCountries) + 1, ] <- orgs[i,4]
+    used[nrow(used) + 1, ] <- orgs[j,1]
+    if (nrow(currGroup) >= 3) {
+      for (k in 1:nrow(currGroup)) {
+        org <- currGroup[k, ]
+        # print(org)
+        # print(org$shortName)
+        # if (is.na(org$shortName)) {
+        #   org$shortName = 'No name'
+        # }
+        row <- c(org$organisationID, org$shortName, org$activityType, org$country)
+        row <- append(row, consortiumCounter)
+        # print(row)
+        new_df[nrow(new_df) + 1,] <- row
+      }
+      consortiumCounter <- consortiumCounter + 1
+      break
+    }
+  }
+}
+
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 6.2. Enriquecer la información de los consorcios (sección 3) ----

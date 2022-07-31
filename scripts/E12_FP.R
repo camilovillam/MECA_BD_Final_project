@@ -171,7 +171,7 @@ filenames
 
 cordis_countries <-       import(filenames[1])
 FP7_programmes <-         import(filenames[2])
-H2020_topic_keywords <-   import(filenames[3])
+#H2020_topic_keywords <-   import(filenames[3])
 cordis_org_activity <-    import(filenames[4])
 cordis_funding_scheme <-  import(filenames[5])
 
@@ -396,8 +396,8 @@ organizations_pat <- filter(organizations,!(is.na(organizations$num_patent)))
 organizations_no_pat <- filter(organizations,(is.na(organizations$num_patent)))
 
 
-export(unis_sin_patentes,"./stores/Nombres_universidades/Unis_sin_patentes.xlsx")
-export(num_patents,".stores/Nombres_universidades/Listado_patentes.xlsx")
+# export(unis_sin_patentes,"./stores/Nombres_universidades/Unis_sin_patentes.xlsx")
+# export(num_patents,".stores/Nombres_universidades/Listado_patentes.xlsx")
 
 
 #Se reitera el problema 
@@ -618,7 +618,7 @@ rm(tipos_paises_consorc)
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 3.5. Experiencia de trabajo previo ("familiaridad") del consorcio ----
+# 3.5. Experiencia de trabajo previo ("Acquaintance") del consorcio ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #Acquaintance:
@@ -779,6 +779,15 @@ colSums(is.na(H2020_project))
 
 H2020_project$acquaintance[is.na(H2020_project$acquaintance)] <- 0
 
+summary(H2020_project$acquaintance)
+
+
+rm(list = ls()[grep("^FP7_consort", ls())])
+rm(list = ls()[grep("H2020_consort", ls())])
+
+rm(list=c("FP7_cuenta_parejas","FP7_pairs_results",
+          "FP7_individual_projects","H2020_pairs_results",
+          "H2020_individual_projects","H2020_acquaintance","i"))
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1006,17 +1015,51 @@ colSums(is.na(H2020_project))
 #Coordinador (experiencia, país, ranking ,patentes)
 #Ranking, patentes
 #Experiencias previas
-#Centralidad y visibilidad del consorcio
 #Experiencia previa individual, agregada a nivel de consorcio (suma)
 
 
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 5.1. Características del coordinador ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
-#TEMPORAL: EXPORTACIÓN PRELIMINAR
-export(H2020_organization,"./stores/H2020_orgs.rds")
-export(H2020_project,"./stores/H2020_projects.rds")
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 5.2. Características de experiencia previa ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 5.3. Métricas de red (centralidad, grado, peso, eigenvector) ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 5.4. Características de ranking ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 5.5. Características de patentes ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+# #TEMPORAL: EXPORTACIÓN PRELIMINAR
+# export(H2020_organization,"./stores/H2020_orgs.rds")
+# export(H2020_project,"./stores/H2020_projects.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1059,29 +1102,29 @@ export(H2020_project,"./stores/H2020_projects.rds")
 # 7.2 Ensayos preliminares
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
-
-colnames(H2020_project)
-
-reg1 <- lm(ln_ecMaxContribution ~
-             consorc_size + share_unis + share_resCen + share_compan +
-             share_EU13 + share_EU15 + share_nonEU,
-           data=H2020_project)
-
-
-reg2 <- lm(ecMaxContribution ~
-                         consorc_size + share_unis + share_resCen + share_compan +
-                         share_EU13 + share_EU15 + share_nonEU,
-                       data=H2020_project)
-
-
-reg3 <- lm(totalCost ~
-                           consorc_size + share_unis + share_resCen + share_compan +
-                           share_EU13 + share_EU15 + share_nonEU,
-                         data=H2020_project)
-
-stargazer(reg1,reg2,reg3,type="text")
-
+# 
+# 
+# colnames(H2020_project)
+# 
+# reg1 <- lm(ln_ecMaxContribution ~
+#              consorc_size + share_unis + share_resCen + share_compan +
+#              share_EU13 + share_EU15 + share_nonEU,
+#            data=H2020_project)
+# 
+# 
+# reg2 <- lm(ecMaxContribution ~
+#                          consorc_size + share_unis + share_resCen + share_compan +
+#                          share_EU13 + share_EU15 + share_nonEU,
+#                        data=H2020_project)
+# 
+# 
+# reg3 <- lm(totalCost ~
+#                            consorc_size + share_unis + share_resCen + share_compan +
+#                            share_EU13 + share_EU15 + share_nonEU,
+#                          data=H2020_project)
+# 
+# stargazer(reg1,reg2,reg3,type="text")
+# 
 
 
 

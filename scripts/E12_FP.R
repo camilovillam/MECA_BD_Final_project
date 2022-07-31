@@ -33,6 +33,7 @@ p_load(rio,
        arsenal,
        janitor,
        tidyverse,
+       tibble,
        gamlr,
        skimr, 
        caret,
@@ -317,6 +318,7 @@ colSums(is.na(H2020_organization))
 
 #Listado único de organizaciones
 
+#OJO CON NÚMEROS DE COLUMNA
 organizations <- distinct(H2020_organization[,3:14])
 
 #Del archivo cargado del ranking se deja solo la última versión
@@ -612,10 +614,10 @@ rm(tipos_paises_consorc)
 ## 3.4. Visibilidad y centralidad del consorcio (degree / eigenvector) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-##Tutorial----
+### 3.4.1. Tutorial----
 
-install.packages("igraph", dependencies=TRUE)
-library(igraph)
+# install.packages("igraph", dependencies=TRUE)
+# library(igraph)
 
 set.seed(8675309)
 
@@ -692,18 +694,25 @@ plot(g4)
 tkplot(g4)
 rglplot(g4, layout=layout.fruchterman.reingold(g, dim=3))
 
-##Leer la base----
-setwd("~/GitHub/MECA_BD_Final_project")
 
-prueba <-readRDS("./stores/H2020_orgs.rds") #174.005 Obs 29 var
+### Leer la base
+#setwd("~/GitHub/MECA_BD_Final_project")
+
+#prueba <-readRDS("./stores/H2020_orgs.rds") #174.005 Obs 29 var
 
 
-## Degree / Eigenvector----
-library(dplyr)
+
+
+### 3.4.2. Degree / Eigenvector----
+
+prueba <- H2020_organization
+
+#library(dplyr)
 
 # Identificamos cuántos cores tiene nuestra máquina
 n_cores <- detectCores()
-cl <- makePSOCKcluster(14) 
+n_cores
+cl <- makePSOCKcluster(n_cores-4) 
 registerDoParallel(cl)
 
 # Filtro de prueba para ver solo UK
@@ -751,99 +760,130 @@ name <- get.vertex.attribute(gpruebados, "shortName")
 
 # Creación de la tabla(matriz) con nuevas variables.
 table <- cbind(name, deg, clo, bet, eig)
-table
-
-library(tibble)
 
 # Convertir matriz en una tabla y mover los nombres de las filas
 # A una nueva columna.
 rowtable <- table %>% as.data.frame() %>% tibble::rownames_to_column("organisationID")
 
-# Guardamos la nueva tabla.
-saveRDS(rowtable, './stores/tabla_variables_grafo.rds')
+org_centrality <- rowtable
 
-##Acquaintance----
+colnames(org_centrality)
+colnames(org_centrality) <- c("organisationID","name","netw_degree",
+                              "netw_closeness" ,"netw_betweenness",
+                              "netw_eigenvector")
 
-setwd("~/GitHub/MECA_BD_Final_project/")
+org_centrality$name <- NULL
 
+#Se une a la base de H2020_org:
+nrow(H2020_organization)
+H2020_organization <- left_join(H2020_organization,
+                                org_centrality,
+                                by="organisationID")
+nrow(H2020_organization)
 
-#### Importar todos los archivos de Excel del directorio:
+colSums(is.na(H2020_organization))
 
-filenames <- list.files("./stores/EU_research_projects/FP7_projects", pattern="*.xlsx", full.names=TRUE)
-filenames
+#Se analizan los NA:
 
+H2020org_NA_netw <- filter(H2020_organization,(is.na(H2020_organization$netw_degree)))
+H2020_consortia_NA_netw <- H2020_project[H2020_project$id %in% 
+                                           H2020org_NA_netw$projectID, ]
 
-#FP7_euroSciVoc <-     import(filenames[1])
-#FP7_publications <-   import(filenames[2])
-#FP7_legalBasis <-     import(filenames[3])
-FP7_organization <-   import(filenames[4])
-FP7_project <-        import(filenames[5])
-#FP7_Irps <-           import(filenames[6])
-#FP7_reportSummaries<- import(filenames[7])
-#FP7_topics <-         import(filenames[8])
-#FP7_webItem <-        import(filenames[9])
-#FP7_webLink <-        import(filenames[10])
+#Son consorcios de 1, se les puede imputar 0
 
+H2020_organization$netw_degree[is.na(H2020_organization$netw_degree)] <- 0
+H2020_organization$netw_closeness[is.na(H2020_organization$netw_closeness)] <- 0
+H2020_organization$netw_betweenness[is.na(H2020_organization$netw_betweenness)] <- 0
+H2020_organization$netw_eigenvector[is.na(H2020_organization$netw_eigenvector)] <- 0
 
-acq <- FP7_organization %>% inner_join(FP7_organization, by="projectID")
+colSums(is.na(H2020_organization))
 
-# Ahora filtramos todas las filas en donde la organización se
-# repite pues no nos interesa tener relaciones cíclicas.
-acq <- acq %>% filter(organisationID.x!=organisationID.y)
-
-# Lo convertimos en el dataframe que espera la librería igraph
-relationships_acq <- acq %>% dplyr::select(to=organisationID.x, from=organisationID.y)
-
-# Ahora extraemos todas las organizaciones que tienen relaciones
-# Para identificar los nodos de una mejor manera de llegar a
-# graficarlos usando labels.
-orgs_acq <- acq %>% distinct(organisationID.x, shortName.x, activityType.x)
-orgs_acq <- orgs_acq %>% dplyr::select(organisationID=organisationID.x,
-                               shortName=shortName.x,
-                               activityType=activityType.x)
-
-# Creamos el grafo y generamos las nuevas variables.
-g_acq <- graph.data.frame(relationships_acq, directed=FALSE, vertices=orgs_acq)
-
-deg_acq <- degree(g_acq, mode="all")            # Degree centrality
-
-clo_acq <- closeness(g_acq)         # Closeness centrality
-
-bet_acq <- betweenness(g_acq)       # Betweenness centrality
-
-eig_acq <- evcent(g_acq)$vector     # Eigenvector centrality
-
-# Intentos de gráfica.
-# Hay demasiada información.
-# plot(g_acq, vertex.label=NA, vertex.size=deg*2)
-# plot(g_acq, vertex.label=NA, vertex.size=5, layout=layout_with_fr,)
-# plot(g_acq, vertex.label=NA, vertex.size=5)
-
-# Crear vector con nombres.
-name_acq <- get.vertex.attribute(g_acq, "shortName")
-
-# Creación de la tabla(matriz) con nuevas variables.
-table_acq <- cbind(name_acq, deg_acq, clo_acq, bet_acq, eig_acq)
-table_acq
-
-library(tibble)
-
-# Convertir matriz en una tabla y mover los nombres de las filas
-# A una nueva columna.
-rowtable_acq <- table_acq %>% as.data.frame() %>% tibble::rownames_to_column("organisationID")
 
 # Guardamos la nueva tabla.
-saveRDS(rowtable_acq, './stores/prueba_acq.rds')
+#saveRDS(rowtable, './stores/tabla_variables_grafo.rds')
 
-# Resumen de número de proyectos (Equivalente a número de acquaintances)
-FP7_orgs <- import(filenames[4])
-tablaNumProyectos <- FP7_orgs %>%
-  group_by(organisationID, name, country, city) %>%
-  summarize(numProyectos=n())
-
-saveRDS(tablaNumProyectos, './stores/tabla_num_proyectos.rds')
-
-histogram(tablaNumProyectos$numProyectos)
+# ##Acquaintance
+# 
+# setwd("~/GitHub/MECA_BD_Final_project/")
+# 
+# 
+# #### Importar todos los archivos de Excel del directorio:
+# 
+# filenames <- list.files("./stores/EU_research_projects/FP7_projects", pattern="*.xlsx", full.names=TRUE)
+# filenames
+# 
+# 
+# #FP7_euroSciVoc <-     import(filenames[1])
+# #FP7_publications <-   import(filenames[2])
+# #FP7_legalBasis <-     import(filenames[3])
+# FP7_organization <-   import(filenames[4])
+# FP7_project <-        import(filenames[5])
+# #FP7_Irps <-           import(filenames[6])
+# #FP7_reportSummaries<- import(filenames[7])
+# #FP7_topics <-         import(filenames[8])
+# #FP7_webItem <-        import(filenames[9])
+# #FP7_webLink <-        import(filenames[10])
+# 
+# 
+# acq <- FP7_organization %>% inner_join(FP7_organization, by="projectID")
+# 
+# # Ahora filtramos todas las filas en donde la organización se
+# # repite pues no nos interesa tener relaciones cíclicas.
+# acq <- acq %>% filter(organisationID.x!=organisationID.y)
+# 
+# # Lo convertimos en el dataframe que espera la librería igraph
+# relationships_acq <- acq %>% dplyr::select(to=organisationID.x, from=organisationID.y)
+# 
+# # Ahora extraemos todas las organizaciones que tienen relaciones
+# # Para identificar los nodos de una mejor manera de llegar a
+# # graficarlos usando labels.
+# orgs_acq <- acq %>% distinct(organisationID.x, shortName.x, activityType.x)
+# orgs_acq <- orgs_acq %>% dplyr::select(organisationID=organisationID.x,
+#                                shortName=shortName.x,
+#                                activityType=activityType.x)
+# 
+# # Creamos el grafo y generamos las nuevas variables.
+# g_acq <- graph.data.frame(relationships_acq, directed=FALSE, vertices=orgs_acq)
+# 
+# deg_acq <- degree(g_acq, mode="all")            # Degree centrality
+# 
+# clo_acq <- closeness(g_acq)         # Closeness centrality
+# 
+# bet_acq <- betweenness(g_acq)       # Betweenness centrality
+# 
+# eig_acq <- evcent(g_acq)$vector     # Eigenvector centrality
+# 
+# # Intentos de gráfica.
+# # Hay demasiada información.
+# # plot(g_acq, vertex.label=NA, vertex.size=deg*2)
+# # plot(g_acq, vertex.label=NA, vertex.size=5, layout=layout_with_fr,)
+# # plot(g_acq, vertex.label=NA, vertex.size=5)
+# 
+# # Crear vector con nombres.
+# name_acq <- get.vertex.attribute(g_acq, "shortName")
+# 
+# # Creación de la tabla(matriz) con nuevas variables.
+# table_acq <- cbind(name_acq, deg_acq, clo_acq, bet_acq, eig_acq)
+# table_acq
+# 
+# library(tibble)
+# 
+# # Convertir matriz en una tabla y mover los nombres de las filas
+# # A una nueva columna.
+# rowtable_acq <- table_acq %>% as.data.frame() %>% tibble::rownames_to_column("organisationID")
+# 
+# # Guardamos la nueva tabla.
+# saveRDS(rowtable_acq, './stores/prueba_acq.rds')
+# 
+# # Resumen de número de proyectos (Equivalente a número de acquaintances)
+# FP7_orgs <- import(filenames[4])
+# tablaNumProyectos <- FP7_orgs %>%
+#   group_by(organisationID, name, country, city) %>%
+#   summarize(numProyectos=n())
+# 
+# saveRDS(tablaNumProyectos, './stores/tabla_num_proyectos.rds')
+# 
+# histogram(tablaNumProyectos$numProyectos)
 
 
 
@@ -1253,24 +1293,72 @@ colSums(is.na(H2020_project))
 ## 5.1. Características del coordinador ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+H2020_coordinators <- H2020_organization[H2020_organization$role=="coordinator",]
+
+colnames(H2020_coordinators)
 
 
+#OJO: LUEGO HAY QUE INCORPORAR LAS VARIABLES DE PATENTES Y RANKING
+
+H2020_coordinators <- 
+  H2020_coordinators[,c("projectID","num_coord_FP7","country_cat")]
+
+colnames(H2020_coordinators) <- c("id","exp_coord_FP7","coord_country_cat")
+
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,H2020_coordinators,by="id")
+
+colSums(is.na(H2020_project))
+
+rm(H2020_coordinators)
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 5.2. Características de experiencia previa ----
+## 5.2. Características de experiencia previa (en FP7) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+exp_prev_H2020 <- H2020_organization %>% 
+  group_by(projectID) %>% 
+  summarize(particip_consorc_FP7 = sum(num_particip_FP7),
+            coordin_consorc_FP7 = sum(num_coord_FP7))
 
+colnames(exp_prev_H2020)[1] <- "id"
+colnames(exp_prev_H2020)
 
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,exp_prev_H2020,by="id")
 
+colSums(is.na(H2020_project))
+
+rm(exp_prev_H2020)
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 5.3. Métricas de red (centralidad, grado, peso, eigenvector) ----
+## 5.3. Métricas de red (centralidad, grado, eigenvector) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#Se calculan las métricas totales de redes para los consorcios (suma)
+
+class(H2020_organization$netw_degree) <- "numeric"
+class(H2020_organization$netw_closeness) <- "numeric"
+class(H2020_organization$netw_betweenness) <- "numeric"
+class(H2020_organization$netw_eigenvector) <- "numeric"
 
 
+network_metrics_H2020 <- H2020_organization %>% 
+  group_by(projectID) %>% 
+  summarize(netw_degree = sum(netw_degree),
+            netw_closeness = sum(netw_closeness),
+            netw_betweenness = sum(netw_betweenness),
+            netw_eigenvector = sum(netw_eigenvector))
 
+colnames(network_metrics_H2020)[1] <- "id"
+colnames(network_metrics_H2020)
+
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,network_metrics_H2020,by="id")
+
+colSums(is.na(H2020_project))
+
+rm(network_metrics_H2020)
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## 5.4. Características de ranking ----
@@ -1288,8 +1376,8 @@ colSums(is.na(H2020_project))
 
 
 # #TEMPORAL: EXPORTACIÓN PRELIMINAR
-# export(H2020_organization,"./stores/H2020_orgs.rds")
-# export(H2020_project,"./stores/H2020_projects.rds")
+export(H2020_organization,"./stores/H2020_orgs.rds")
+export(H2020_project,"./stores/H2020_projects.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

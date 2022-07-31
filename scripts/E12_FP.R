@@ -1477,9 +1477,20 @@ saveRDS(new_df, './stores/consorcios_europeos_aleatorios.rds')
 
 # Agregar consorcios fuera de EU a los nuevos consorcios.
 
+# Obtener paises no euro.
 nonEurOrgs <- H2020 %>% 
   filter(country_cat == 'NonEU') %>%
   distinct(organisationID, name, activityType, country)
+
+# Desordenar lista.
+nonEurOrgs <- nonEurOrgs[sample(1:nrow(nonEurOrgs)), ]
+
+nonEurOrgs <- nonEurOrgs %>% 
+  mutate(consortium=sample(1:consortiumCounter, nrow(nonEurOrgs), replace=TRUE))
+
+consorcios_test <- rbind(new_df, nonEurOrgs)
+
+saveRDS(consorcios_test, './stores/consorcios_test.rds')
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 6.2. Enriquecer la información de los consorcios (sección 3) ----

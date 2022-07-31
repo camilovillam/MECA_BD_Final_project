@@ -630,6 +630,81 @@ rowtable <- table %>% as.data.frame() %>% tibble::rownames_to_column("organisati
 # Guardamos la nueva tabla.
 saveRDS(rowtable, './stores/tabla_variables_grafo.rds')
 
+
+##Acquaintance----
+
+setwd("~/GitHub/MECA_BD_Final_project/")
+
+
+#### Importar todos los archivos de Excel del directorio:
+
+filenames <- list.files("./stores/EU_research_projects/FP7_projects", pattern="*.xlsx", full.names=TRUE)
+filenames
+
+
+#FP7_euroSciVoc <-     import(filenames[1])
+#FP7_publications <-   import(filenames[2])
+#FP7_legalBasis <-     import(filenames[3])
+FP7_organization <-   import(filenames[4])
+FP7_project <-        import(filenames[5])
+#FP7_Irps <-           import(filenames[6])
+#FP7_reportSummaries<- import(filenames[7])
+#FP7_topics <-         import(filenames[8])
+#FP7_webItem <-        import(filenames[9])
+#FP7_webLink <-        import(filenames[10])
+
+
+acq <- FP7_organization %>% inner_join(FP7_organization, by="projectID")
+
+# Ahora filtramos todas las filas en donde la organización se
+# repite pues no nos interesa tener relaciones cíclicas.
+acq <- acq %>% filter(organisationID.x!=organisationID.y)
+
+# Lo convertimos en el dataframe que espera la librería igraph
+relationships_acq <- acq %>% dplyr::select(to=organisationID.x, from=organisationID.y)
+
+# Ahora extraemos todas las organizaciones que tienen relaciones
+# Para identificar los nodos de una mejor manera de llegar a
+# graficarlos usando labels.
+orgs_acq <- acq %>% distinct(organisationID.x, shortName.x, activityType.x)
+orgs_acq <- orgs %>% dplyr::select(organisationID=organisationID.x,
+                               shortName=shortName.x,
+                               activityType=activityType.x)
+
+# Creamos el grafo y generamos las nuevas variables.
+g_acq <- graph.data.frame(relationships_acq, directed=FALSE, vertices=orgs_acq)
+
+deg_acq <- degree(g_acq, mode="all")            # Degree centrality
+
+clo_acq <- closeness(g_acq)         # Closeness centrality
+
+bet_acq <- betweenness(g_acq)       # Betweenness centrality
+
+eig_acq <- evcent(g_acq)$vector     # Eigenvector centrality
+
+# Intentos de gráfica.
+# Hay demasiada información.
+# plot(g_acq, vertex.label=NA, vertex.size=deg*2)
+# plot(g_acq, vertex.label=NA, vertex.size=5, layout=layout_with_fr,)
+# plot(g_acq, vertex.label=NA, vertex.size=5)
+
+# Crear vector con nombres.
+name_acq <- get.vertex.attribute(g_acq, "shortName")
+
+# Creación de la tabla(matriz) con nuevas variables.
+table_acq <- cbind(name_acq, deg_acq, clo_acq, bet_acq, eig_acq)
+table_acq
+
+library(tibble)
+
+# Convertir matriz en una tabla y mover los nombres de las filas
+# A una nueva columna.
+rowtable_acq <- table_acq %>% as.data.frame() %>% tibble::rownames_to_column("organisationID")
+
+# Guardamos la nueva tabla.
+saveRDS(rowtable_acq, './stores/prueba_acq.rds')
+
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 3.5. Experiencia de trabajo previo ("familiaridad") del consorcio ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

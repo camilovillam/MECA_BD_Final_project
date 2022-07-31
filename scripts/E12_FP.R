@@ -1490,6 +1490,13 @@ nonEurOrgs <- nonEurOrgs %>%
 
 consorcios_test <- rbind(new_df, nonEurOrgs)
 
+# Convertir consorcios en numérico.
+consorcios_test <- consorcios_test %>% transform(consortium = as.numeric(consortium))
+
+# Máximo número de consorcios.
+max(consorcios_test$consortium)
+
+# Guardar base.
 saveRDS(consorcios_test, './stores/consorcios_test.rds')
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

@@ -45,7 +45,8 @@ p_load(rio,
        rpart,
        rpart.plot,
        glmnet,
-       xgboost)
+       xgboost,
+       gtools)
 
 
 
@@ -148,7 +149,7 @@ filenames
 #FP7_legalBasis <-     import(filenames[3])
 FP7_organization <-   import(filenames[4])
 FP7_project <-        import(filenames[5])
-#FP7_Irps <-           import(filenames[6])
+FP7_Irps <-           import(filenames[6])
 #FP7_reportSummaries<- import(filenames[7])
 #FP7_topics <-         import(filenames[8])
 #FP7_webItem <-        import(filenames[9])
@@ -181,12 +182,60 @@ cordis_funding_scheme <-  import(filenames[5])
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
+#Cargar las bases de datos de patentes:
 
+#patentes_reg <- import("./stores/OECD_REGPAT/202202_PCT_App_reg.txt")
+#export(patentes_reg,"./stores/OECD_REGPAT/202202_PCT_App_reg.rds")
+
+#patentes_reg <- import("./stores/OECD_REGPAT/202202_PCT_App_reg.rds")
+
+#Cargar la base de datos armonizada de nombres de postulantes (HAN)
+#HAN: Harmonised Applicant Names
+
+# nombres_han <- import("./stores/OECD_REGPAT/OECD_HAN/202202_HAN_NAMES.txt")
+# patentes_han <- import("./stores/OECD_REGPAT/OECD_HAN/202202_HAN_PATENTS.txt")
+# export(nombres_han,"./stores/OECD_REGPAT/OECD_HAN/202202_HAN_Names.rds")
+# export(patentes_han,"./stores/OECD_REGPAT/OECD_HAN/202202_HAN_Patents.rds")
+
+nombres_han <- import("./stores/OECD_REGPAT/OECD_HAN/202202_HAN_Names.rds")
+patentes_han <- import("./stores/OECD_REGPAT/OECD_HAN/202202_HAN_Patents.rds")
+
+
+#colnames(patentes_reg)
+colnames(nombres_han)
+colnames(patentes_han)
+
+#nrow(patentes_reg)
+nrow(nombres_han)
+nrow(patentes_han)
+
+# patents_sample <- patentes_reg[1:10000,]
+
+
+#Queremos agregar el nombre armonizado a la base de datos de patentes:
+patentes_han <- left_join(patentes_han,nombres_han,by="HAN_ID")
+
+table(patentes_han$Publn_auth)
+#La base más completa es la HAN; se puede hacer un conteo simple de patentes
+
+
+colnames(patentes_han)
+
+num_patents <- patentes_han %>% 
+  group_by(Clean_name,Person_ctry_code) %>% 
+  summarize(num_patent= n())
+
+table(duplicated(num_patents))
+
+colnames(num_patents) <- c("name","country","num_patent")
+num_patents$name <- toupper(num_patents$name)
+
+export(num_patents,"./stores/OECD_REGPAT/Cuenta_patentes.rds")
 
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 1.3 Base de datos CWTS Leiden Ranking 2022 (excelencia científica)  ----
+## 1.3. Base de datos CWTS Leiden Ranking 2022 (excelencia científica)  ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 setwd("~/GitHub/MECA_BD_Final_project/")
@@ -210,9 +259,59 @@ sapply(CWTS_ranking, class)
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 2.1. Experiencia previa en FP7 ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+#skim(H2020_organization)
+table(H2020_organization$role)
+table(FP7_organization$role)
+
+
+#Se calculan el número de participaciones y de coordinaciones en el FP7
+org_particip_FP7 <- FP7_organization %>% 
+  group_by(organisationID) %>% 
+  summarize(num_particip_FP7= sum(role=="participant"),
+            num_coord_FP7 = sum(role=="coordinator"))
+
+#Se hace el join con la base de H2020
+nrow(H2020_organization)
+H2020_organization <- left_join(H2020_organization,org_particip_FP7,by="organisationID")
+
+colSums(is.na(H2020_organization))
+
+#A los que quedan con NA se les imputa 0 (no han participado ni coordinado)
+H2020_organization$num_particip_FP7[is.na(H2020_organization$num_particip_FP7)] <- 0
+H2020_organization$num_coord_FP7[is.na(H2020_organization$num_coord_FP7)] <- 0
+
+
+
+# Puede ser útil: experiencia en la misma base de H2020 (partner / coordinator)
+
+table(H2020_organization$role)
+
+#Se calculan el número de participaciones y de coordinaciones en el FP7
+org_particip_H2020 <- H2020_organization %>% 
+  group_by(organisationID) %>% 
+  summarize(num_particip_H2020= sum(role %in% c("participant",
+                                                "internationalPartner",
+                                                "partner",
+                                                "thirdParty")),
+            num_coord_H2020 = sum(role=="coordinator"))
+
+
+#Se hace el join con la base de H2020
+nrow(H2020_organization)
+H2020_organization <- left_join(H2020_organization,org_particip_H2020,by="organisationID")
+
+colSums(is.na(H2020_organization))
+
+
+
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 2.1 Ranking CWTS Leiden 2022 ----
+## 2.2. Ranking CWTS Leiden 2022 ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -265,44 +364,52 @@ print(paste0("El porcentaje de universidades encontradas es ", round(100 - (3681
 #export(ranking2022,"./stores/Nombres_universidades/Ranking 2022.xlsx")
 
 
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 2.2 Patentes ----
+## 2.3. Patentes OECD REGPAT ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #Puede ser complejo sacar la info de la OCDE por los nombres
 #Idea de Proxy: patentes en los FP anteriores
 
+nrow(organizations)
+
+#Hacer el join por institutción + país
+
+organizations$name_pais <- paste0(organizations$name,"_",organizations$country)
+num_patents$name_pais <- paste0(num_patents$name,"_",num_patents$country)
+
+organizations <- left_join(organizations,
+                           num_patents[,c("name_pais","num_patent")]
+                           ,by="name_pais")
+nrow(organizations)
+
+sum(is.na(organizations$num_patent))
+
+print(paste0("El porcentaje de organizaciones con patentes encontradas es ",
+             round(100 - (sum(is.na(organizations$num_patent)) / 
+                            nrow(organizations))*100,1), " %"))
+
+uni_REC_patentes <- filter(organizations,organizations$activityType %in% c("HES","REC"))
+
+organizations_pat <- filter(organizations,!(is.na(organizations$num_patent)))
+organizations_no_pat <- filter(organizations,(is.na(organizations$num_patent)))
+
+
+export(unis_sin_patentes,"./stores/Nombres_universidades/Unis_sin_patentes.xlsx")
+export(num_patents,".stores/Nombres_universidades/Listado_patentes.xlsx")
+
+
+#Se reitera el problema 
+
+#Intentar por lo menos tener las patentes de los 50 top coordinadores
+#y los 50 top participantes (experiencia FP7 + experiencia H2020).
 
 
 
 
+#Alternativa: patentes en FP7 (disponible)
 
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 2.3 Experiencia previa en FP7 ----
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-#skim(H2020_organization)
-table(H2020_organization$role)
-table(FP7_organization$role)
-
-
-#Se calculan el número de participaciones y de coordinaciones en el FP7
-org_particip_FP7 <- FP7_organization %>% 
-  group_by(organisationID) %>% 
-  summarize(num_particip_FP7= sum(role=="participant"),
-            num_coord_FP7 = sum(role=="coordinator"))
-
-#Se hace el join con la base de H2020
-nrow(H2020_organization)
-H2020_organization <- left_join(H2020_organization,org_particip_FP7,by="organisationID")
-
-colSums(is.na(H2020_organization))
-
-#A los que quedan con NA se les imputa 0 (no han participado ni coordinado)
-H2020_organization$num_particip_FP7[is.na(H2020_organization$num_particip_FP7)] <- 0
-H2020_organization$num_coord_FP7[is.na(H2020_organization$num_coord_FP7)] <- 0
 
 
 
@@ -334,6 +441,31 @@ colSums(is.na(H2020_project))
 nrow(H2020_project)
 H2020_project <- filter(H2020_project,!(is.na(H2020_project$consorc_size)))
 nrow(H2020_project)
+
+rm(tamano_consorc)
+
+
+
+#Se repite para FP7 (se necesitará más adelante)
+
+tamano_consorc <- FP7_organization %>% 
+  group_by(projectID) %>%
+  summarize(consorc_size = n())
+
+tamano_consorc$id <- tamano_consorc$projectID
+class(tamano_consorc$id) <- "character"
+tamano_consorc$projectID <- NULL
+
+nrow(FP7_project)
+FP7_project <- left_join(FP7_project,tamano_consorc,by="id")
+nrow(FP7_project)
+
+colSums(is.na(FP7_project))
+
+#Se eliminan pocos registros que quedan con NA:
+nrow(FP7_project)
+FP7_project <- filter(FP7_project,!(is.na(FP7_project$consorc_size)))
+nrow(FP7_project)
 
 rm(tamano_consorc)
 
@@ -485,14 +617,167 @@ rm(tipos_paises_consorc)
 
 
 
-
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 3.5. Experiencia de trabajo previo ("familiaridad") del consorcio ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#Acquaintance:
+
+#"Number of joint participations of project partners in FP7 projects (count)"
+
+
+## Parejas de organizaciones de H2020:
+
+#Hay que remover los consorcios de 1
+H2020_individual_projects <- filter(H2020_project,H2020_project$consorc_size=="1")
+
+  nrow(H2020_organization)
+
+
+H2020_consortia <- H2020_organization[! H2020_organization$projectID %in% 
+                                        H2020_individual_projects$id, ]
+
+nrow(H2020_consortia)
+
+
+#Se dejan solo el nombre del consorcio y de la organización:
+H2020_consortia <- H2020_consortia[ , c("projectID","organisationID")]
+
+#Se deben eliminar duplicados:
+
+table(duplicated(H2020_consortia))
+H2020_consortia <- distinct(H2020_consortia, .keep_all = TRUE)
+table(duplicated(H2020_consortia))
+
+
+#Ahora se separan en una lista las observaciones de cada consorcio
+H2020_consortia_list <- split(H2020_consortia, f = H2020_consortia$projectID)
+H2020_pairs_results <- list()
+
+gc()
+
+
+for (i in 1:length(H2020_consortia_list)){
+  
+  H2020_pairs_results[[i]] <- data.frame(combinations(nrow(H2020_consortia_list[[i]]),
+                                                      2,
+                                                      H2020_consortia_list[[i]][,2]))
+  names(H2020_pairs_results)[i] <- names(H2020_consortia_list)[i]
+}
+
+H2020_consortia_pairs <- bind_rows(H2020_pairs_results, .id = "projectID")
+H2020_consortia_pairs$pair <- paste0(H2020_consortia_pairs$X1,"_",H2020_consortia_pairs$X2)
 
 
 
+## Parejas de organizaciones de FP7:
+
+#Se calcula el tamaño de los consorcios de FP7
+
+
+#Hay que remover los consorcios de 1
+
+#Se guardan los consorcios de 1
+FP7_individual_projects <- filter(FP7_project,FP7_project$consorc_size=="1")
+
+nrow(FP7_organization)
+
+#Se remueven los consorcios de 1
+FP7_consortia <- FP7_organization[! FP7_organization$projectID %in% 
+                                    FP7_individual_projects$id, ]
+
+nrow(FP7_consortia)
+
+
+#Se dejan solo el nombre del consorcio y de la organización:
+FP7_consortia <- FP7_consortia[ , c("projectID","organisationID")]
+
+#Se deben eliminar duplicados:
+
+table(duplicated(FP7_consortia))
+FP7_consortia <- distinct(FP7_consortia, .keep_all = TRUE)
+table(duplicated(FP7_consortia))
+
+
+#Se eliminan NAs
+colSums(is.na(FP7_consortia))
+FP7_consortia <- filter(FP7_consortia,!(is.na(FP7_consortia$organisationID)))
+
+#OJO: Al eliminar duplicados o NAs me pueden quedar consorcios de 1 y me falla
+#el For.
+
+#Identificar nuevos consorcios de 1:
+
+FP7_consortia_singles <- FP7_consortia %>% 
+  group_by(projectID) %>% 
+  summarize(consorc_size=n())
+
+FP7_consortia_singles <- filter(FP7_consortia_singles,
+                                FP7_consortia_singles$consorc_size=="1")
+
+#Hay que remover los consorcios de 1
+FP7_consortia <- FP7_consortia[! FP7_consortia$projectID %in% 
+                                 FP7_consortia_singles$projectID, ]
+
+
+
+#Ahora se separan en una lista las observaciones de cada consorcio
+FP7_consortia_list <- split(FP7_consortia, f = FP7_consortia$projectID)
+length(FP7_consortia_list)
+FP7_pairs_results <- list()
+
+gc()
+
+# #Debuggin
+# i=2327
+# view(FP7_consortia_list[[i]])
+
+for (i in 1:length(FP7_consortia_list)){
+  
+  FP7_pairs_results[[i]] <- data.frame(combinations(nrow(FP7_consortia_list[[i]]),
+                                                    2,
+                                                    FP7_consortia_list[[i]][,2]))
+  names(FP7_pairs_results)[i] <- names(FP7_consortia_list)[i]
+}
+
+FP7_consortia_pairs <- bind_rows(FP7_pairs_results, .id = "projectID")
+FP7_consortia_pairs$pair <- paste0(FP7_consortia_pairs$X1,"_",FP7_consortia_pairs$X2)
+
+
+
+#Se calcula la cantidad de veces que cada pareja aparece en consorcios FP7
+FP7_cuenta_parejas <- FP7_consortia_pairs %>%
+  group_by(pair) %>% 
+  summarize(cuenta_pareja_FP7=n())
+
+#Se trae la cantidad de veces que cada pareja de H2020 estuvo en FP7
+nrow(H2020_consortia_pairs)
+H2020_consortia_pairs <- left_join(H2020_consortia_pairs,FP7_cuenta_parejas,by="pair")
+
+colSums(is.na(H2020_consortia_pairs))
+
+#A los que quedan con NA se les imputa 0 participaciones previas
+H2020_consortia_pairs$cuenta_pareja_FP7[is.na(H2020_consortia_pairs$cuenta_pareja_FP7)] <- 0
+
+#Se calcula el acquaintance de cada proyecto (consorcio):
+#"Number of joint participations of project partners in FP7 projects (count)"
+
+H2020_acquaintance <- H2020_consortia_pairs %>% 
+  group_by(projectID) %>% 
+  summarize(acquaintance=sum(cuenta_pareja_FP7))
+
+colnames(H2020_acquaintance) <- c("id","acquaintance")
+
+
+#Se agrega el acquaintance a la base de proyectos:
+
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,H2020_acquaintance,by = "id")
+
+colSums(is.na(H2020_project))
+#Los consorcios de 1 quedan con NAs, se les imputa 0
+
+H2020_project$acquaintance[is.na(H2020_project$acquaintance)] <- 0
 
 
 
@@ -741,14 +1026,14 @@ export(H2020_project,"./stores/H2020_projects.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 6.1 Creación de los consorcios aleatorios ----
+# 6.1. Creación de los consorcios aleatorios ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 6.2 Enriquecer la información de los consorcios (sección 3) ----
+# 6.2. Enriquecer la información de los consorcios (sección 3) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

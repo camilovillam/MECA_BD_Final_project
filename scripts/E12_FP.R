@@ -1481,12 +1481,15 @@ H2020_coordinators <- H2020_organization[H2020_organization$role=="coordinator",
 
 colnames(H2020_coordinators)
 
-H2020_organization$ranking_top50
 
 H2020_coordinators <- 
-  H2020_coordinators[,c("projectID","num_coord_FP7","country_cat","ranking_top50","evidencia_patente")]
+  H2020_coordinators[,c("projectID","num_coord_FP7","country_cat",
+                        "ranking_top1","ranking_top50","ranking_EU_top50",
+                        "evidencia_patente")]
 
-colnames(H2020_coordinators) <- c("id","exp_coord_FP7","coord_country_cat","coord_top50_rank","coord_patentes")
+colnames(H2020_coordinators) <- c("id","coord_exper_FP7","coord_country_cat",
+                                  "coord_ranking_p1","coord_top50_rank",
+                                  "coord_top50_EU","coord_evid_patentes")
 
 nrow(H2020_project)
 H2020_project <- left_join(H2020_project,H2020_coordinators,by="id")
@@ -1734,7 +1737,7 @@ saveRDS(consorcios_test, './stores/consorcios_test.rds')
 # 7.1 Separación de bases de datos y preparación
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-train <- H2020_organization
+#train <- H2020_organization
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

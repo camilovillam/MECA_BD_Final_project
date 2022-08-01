@@ -1481,17 +1481,94 @@ colnames(H2020_project)
 nrow(H2020_project)
 colSums(is.na(H2020_project))
 
-H2020_project$indice_integrado <- 
-  log((H2020_project$num_patentes * 0.40 + 
-     H2020_project$NPub_peerArticle * 0.40 +
-     H2020_project$NPub_total - H2020_project$NPub_peerArticle * 0.1 +
-     H2020_project$NEntreg_total*0.1)*H2020_project$EC_cost_share)
-  
-sum(is.na(H2020_project$indice_integrado))
+#Explorar las variables que conforman el índice:
+
+summary(H2020_project$num_patentes)
+hist(H2020_project$num_patentes)
+
+summary(H2020_project$NPub_peerArticle)
+hist(H2020_project$NPub_peerArticle)
+
+summary(H2020_project$NPub_resto)
+hist(H2020_project$NPub_resto)
+
+summary(H2020_project$NEntreg_total)
+hist(H2020_project$NEntreg_total)
+
+summary(H2020_project$EC_cost_share)
+hist(H2020_project$EC_cost_share)
+
+summary(H2020_project$ln_ecMaxContribution)
+hist(H2020_project$ln_ecMaxContribution)
+
+summary(H2020_project$ecMaxContribution)
+hist(H2020_project$ecMaxContribution)
 
 summary(H2020_project$ln_totalCost)
-summary(H2020_project$indice_integrado)
-hist(H2020_project$indice_integrado)
+hist(H2020_project$ln_totalCost)
+
+summary(H2020_project$totalCost)
+hist(H2020_project$totalCost)
+
+#Se escalan las variables para el índice:
+
+H2020_project$num_patentes_s <- scale(H2020_project$num_patentes,center = TRUE, scale = TRUE)
+H2020_project$NPub_peerArticle_s <- scale(H2020_project$NPub_peerArticle  ,center = TRUE, scale = TRUE)
+H2020_project$NPub_resto_s <- scale(H2020_project$NPub_resto ,center = TRUE, scale = TRUE)
+H2020_project$NEntreg_total_s <- scale(H2020_project$NEntreg_total ,center = TRUE, scale = TRUE)
+H2020_project$EC_cost_share_s <- scale(H2020_project$EC_cost_share ,center = TRUE, scale = TRUE)
+H2020_project$ecMaxContribution_s <- scale(H2020_project$ecMaxContribution ,center = TRUE, scale = TRUE)
+H2020_project$totalCost_s <- scale(H2020_project$totalCost ,center = TRUE, scale = TRUE)
+
+
+#Explorar las variables escaladas que conforman el índice:
+
+summary(H2020_project$num_patentes_s)
+hist(H2020_project$num_patentes_s)
+
+summary(H2020_project$NPub_peerArticle_s)
+hist(H2020_project$NPub_peerArticle_s)
+
+summary(H2020_project$NPub_resto_s)
+hist(H2020_project$NPub_resto_s)
+
+summary(H2020_project$NEntreg_total_s)
+hist(H2020_project$NEntreg_total_s)
+
+summary(H2020_project$EC_cost_share_s)
+hist(H2020_project$EC_cost_share_s)
+
+summary(H2020_project$ecMaxContribution_s)
+hist(H2020_project$ecMaxContribution_s)
+
+summary(H2020_project$totalCost_s)
+hist(H2020_project$totalCost_s)
+
+
+#Se calcula el índice:
+
+
+# H2020_project$indice_integrado <- 
+#   H2020_project$num_patentes * 10 + 
+#   H2020_project$NPub_peerArticle * 60 +
+#   H2020_project$NPub_resto * 10 +
+#   H2020_project$NEntreg_total*20
+#   
+# summary(H2020_project$indice_integrado)
+# hist(H2020_project$indice_integrado)
+# boxplot(H2020_project$indice_integrado)
+
+H2020_project$indice_integrado_s <- 
+  log(H2020_project$num_patentes_s * 10 + 
+        H2020_project$NPub_peerArticle_s * 60 +
+        H2020_project$NPub_resto_s * 10 +
+        H2020_project$NEntreg_total_s*20 + 
+        100)
+
+summary(H2020_project$indice_integrado_s)
+hist(H2020_project$indice_integrado_s)
+boxplot(H2020_project$indice_integrado_s)
+
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1656,8 +1733,35 @@ H2020_project$consorcUnit <- if_else(H2020_project$consorc_size==1,TRUE,FALSE)
 
 
 
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 5.6. Exportación ----
+## 5.7. Cálculo calificación de los jurados (estimación regresión paper) ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+colnames(H2020_project)
+
+H2020_project$coord_exper_FP7_dummy <- if_else(H2020_project$coord_exper_FP7>0,1,0)
+H2020_project$log_eigenvector <- log(H2020_project$netw_eigenvector+1)
+
+H2020_project$expert_score_hat <- 
+  H2020_project$log_eigenvector * 0.516 +
+  H2020_project$coord_exper_FP7_dummy * 0.262 +
+  H2020_project$acquaintance * (-0.001) +
+  H2020_project$ranking_top50_consorc * 0.109 +
+  H2020_project$share_resCen * 0.007 +
+  H2020_project$share_unis * (-0.012) +
+  H2020_project$NumPartners_EU13 * (-0.222) + 
+  H2020_project$consorc_size * (0.148) + 
+  10.571
+
+summary(H2020_project$expert_score_hat)
+hist(H2020_project$expert_score_hat)
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 5.8. Exportación ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #Control de NA
@@ -1855,49 +1959,55 @@ train[ , c("legalBasis","ecSignatureDate","nature","objective",
 
 export(train,"./stores/train.rds")
 
+# Análisis preliminar: ¿correlación entre nuestro índice y el puntaje de expertos?
+cor(train$indice_integrado_s,train$expert_score_hat)
+cor.test(train$indice_integrado_s,train$expert_score_hat)
+scatter.smooth(train$indice_integrado_s,train$expert_score_hat)
+
+reg1 <- lm(expert_score_hat ~ indice_integrado_s,data=train)
+stargazer(reg1,type="text")
+
+summary(train$expert_score_hat)
+summary(train$indice_integrado_s)
+
+
+
+## 8.1.1. Separación de bases de datos y preparación ----
+
+
+# Revisar: Generamos las particiones
+
+set.seed(100)
+split1 <- createDataPartition(train$expert_score_hat, p = .7)[[1]]
+length(split1) 
+
+other <- train[-split1,]
+Tr_train <- train[split1,]
+
+split2 <- createDataPartition(other$expert_score_hat, p = 1/3)[[1]]
+
+Tr_eval <- other[ split2,]
+Tr_test <- other[-split2,]
+
+nrow(Tr_train)
+nrow(Tr_eval)
+nrow(Tr_test)
+
+nrow(Tr_train)+nrow(Tr_eval)+nrow(Tr_test)==nrow(train)
+
+rm(list=c("other","split1","split2"))
+
+
+
+
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.2 Ensayos preliminares ----
+## 8.2 Modelos: recursos del proyecto ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-# 
-# 
-# colnames(H2020_project)
-# 
-# reg1 <- lm(ln_ecMaxContribution ~
-#              consorc_size + share_unis + share_resCen + share_compan +
-#              share_EU13 + share_EU15 + share_nonEU,
-#            data=H2020_project)
-# 
-# 
-# reg2 <- lm(ecMaxContribution ~
-#                          consorc_size + share_unis + share_resCen + share_compan +
-#                          share_EU13 + share_EU15 + share_nonEU,
-#                        data=H2020_project)
-# 
-# 
-# reg3 <- lm(totalCost ~
-#                            consorc_size + share_unis + share_resCen + share_compan +
-#                            share_EU13 + share_EU15 + share_nonEU,
-#                          data=H2020_project)
-# 
-# stargazer(reg1,reg2,reg3,type="text")
-# 
 
-
-
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.3 Modelos: patentes ----
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-form_patentes
-
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.4 Modelos: publicaciones ----
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 colnames(train)
+colSums(is.na(train))
 
 #Lógica:
 
@@ -1908,63 +2018,85 @@ colnames(train)
 #Características de excelencia cientifica del consorcio (ranking)
 #Características de patentes del consorcio.
 
-regresores <- "~ consorc_size +
-                          share_unis + share_resCen + share_compan +
+#OJO:
+#Degree y Eigenvector no deberían estar juntos
+#Uni_share y priv_share no deberían ir juntos (correlación negativa, paper)
+
+regresores <- "~ consorc_size + consorcUnit + fS_type +
+                          share_unis + share_resCen + 
                           share_EU13 + share_EU15 + share_nonEU + 
-                          acquaintance + netw_degree + netw_eigenvector + 
+                          acquaintance + log_eigenvector + 
                           coord_exper_FP7 + coord_country_cat + 
                           coord_ranking_p1 + coord_top50_rank + 
                           coord_top50_EU + coord_evid_patentes + 
                           ranking_top50_consorc + rank_EU_top50_consorc +
-                          evid_patent_consorc"
+                          evid_patent_consorc +
+                          expert_score_hat"
+
+
+form_lntotalcost <- as.formula(paste0("ln_totalCost",regresores))
+form_totalcost <-  as.formula(paste0("totalCost",regresores))
+form_lnECcontrib <- as.formula(paste0("ln_ecMaxContribution",regresores))
+form_ECcontrib <-  as.formula(paste0("ecMaxContribution",regresores))
+
+
+reg_lntotalcost <- lm(form_lntotalcost,data=Tr_train)
+reg_totalcost <-  lm(form_totalcost,data=Tr_train)
+reg_lnECcontrib <- lm(form_lnECcontrib,data=Tr_train)
+reg_ECcontrib <- lm(form_ECcontrib,data=Tr_train)
+
+
+stargazer(reg_lntotalcost,reg_totalcost,reg_lnECcontrib,reg_ECcontrib,type="text")
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 8.3 Modelos: patentes ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+form_patentes <- as.formula(paste0("num_patentes",regresores))
+
+reg_patentes <- lm(form_patentes,data=Tr_train)
+
+stargazer(reg_patentes,type="text")
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 8.4 Modelos: publicaciones ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 form_articl <- as.formula(paste0("NPub_peerArticle",regresores))
 form_tot_publs <- as.formula(paste0("NPub_total",regresores))
+form_otras_pubs <- as.formula(paste0("NPub_resto",regresores))
 
+reg_articl <- lm(form_articl,data=Tr_train)
+reg_tot_publs <- lm(form_tot_publs,data=Tr_train)
+reg_otras_pubs <- lm(form_otras_pubs,data=Tr_train)
 
-reg_articl <- lm(form_articl,data=train)
-reg_tot_publs <- lm(form_tot_publs,data=train)
-
-stargazer(reg_articl,reg_tot_publs,type="text")
+stargazer(reg_articl,reg_tot_publs,reg_otras_pubs,type="text")
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## 8.5 Modelos: otros entregables ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+form_entreg <- as.formula(paste0("NEntreg_total",regresores))
 
+reg_entreg <- lm(form_entreg,data=Tr_train)
 
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.6 Modelos: recursos del proyecto ----
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-
+stargazer(reg_entreg,type="text")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.7 Modelos: estimación índice de calificación ----
+## 8.6 Modelos: estimación índice de calificación ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-# #Solo por probar: regresión del índice calculado
-# 
+colnames(train)
 
-# 
-# train$regPat <- (train$num_patentes / train$totalCost)*0.35
-# train$regArts <- (train$NPub_peerArticle / train$totalCost)*0.35
-# train$regECfinanc <- (train$ecMaxContribution / train$totalCost)*0.2
-# train$regPublics <- (train$NPub_resto / train$totalCost)*0.05
-# train$regEntreg <- (train$NEntreg_total / train$totalCost)*0.05
-# 
-# form_indice <- as.formula("indice_integrado ~ regPat +
-#                           regArts +
-#                           regECfinanc + 
-#                           regPublics +
-#                           regEntreg")
-# 
-# reg_indice <- lm(form_indice,data=train)
-# 
-# stargazer(reg_indice,type="text")
+form_indice_integrado <- as.formula(paste0("indice_integrado_s",regresores))
+
+reg_indice_integrado <- lm(form_indice_integrado,data=Tr_train)
+
+stargazer(reg_indice_integrado,type="text")
+
+
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 9. CÁLCULO ÍNDICE AGREGADO ----

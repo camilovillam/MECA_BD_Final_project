@@ -260,6 +260,65 @@ sapply(CWTS_ranking, class)
 # 2. PREPARACIÓN BASES DE DATOS: INSTITUCIONES ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 2.0. Categorías de países ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+cordis_countries <- cordis_countries[cordis_countries$language=="en",]
+
+EU_13 <- c(
+  "Bulgaria",
+  "Croatia",
+  "Cyprus",
+  "Czechia",
+  "Estonia",
+  "Hungary",
+  "Latvia",
+  "Lithuania",
+  "Malta",
+  "Poland",
+  "Romania",
+  "Slovakia",
+  "Slovenia")
+
+EU_15 <- c(
+  "Austria",
+  "Belgium",
+  "Denmark",
+  "Finland",
+  "France",
+  "Germany", 
+  "Greece",
+  "Ireland",
+  "Italy",
+  "Luxembourg",
+  "Netherlands",
+  "Portugal",
+  "Spain",
+  "Sweden",
+  "United Kingdom")
+
+
+cordis_countries$country_cat <- case_when(
+  cordis_countries$name %in% EU_13 ~ "EU13",
+  cordis_countries$name %in% EU_15 ~ "EU15",
+  TRUE ~ "NonEU"
+)
+
+table(cordis_countries$country_cat)
+
+colnames(cordis_countries) <- c("country",
+                                "isoCode",
+                                "country_name",
+                                "language",
+                                "country_cat")
+
+#Se hace un join con la tabla de organizaciones para añadirle esta información
+H2020_organization <- left_join(H2020_organization,
+                                cordis_countries[,c("country","country_name","country_cat")],
+                                by="country")
+
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## 2.1. Experiencia previa en FP7 ----
@@ -394,7 +453,7 @@ nrow(H2020_organization)
 
 
 
-#PROBLEMA COMPLEJO, NAME DISAMBIGUATION.
+#PROBLEMA COMPLEJO, INSTITUTIONS' NAMES DISAMBIGUATION.
 
 # Solución para este caso específico: la excelencia científica se mide solo para
 # las 50 top universidades, es decir, es una variable dummy para reflejar
@@ -412,23 +471,79 @@ nrow(H2020_organization)
 
 ### 2.2.3. Join con diccionario de nombres de universidades ----
 
+dicc_unis <- import("./stores/Nombres_universidades/Diccionario_nombres_unis.xlsx")
+
+colnames(dicc_unis)
+colnames(dicc_unis)[2] <- "country_name"
+head(dicc_unis)
+
+dicc_unis <- left_join(dicc_unis,cordis_countries[,c("country","country_name")],
+                       by="country_name")
+
+dicc_unis$uni_country_rank <- toupper(paste0(dicc_unis$Name_ranking,"_",dicc_unis$country_name))
+dicc_unis$uni_country_cordis <- toupper(paste0(dicc_unis$Name_horizon,"_",dicc_unis$country_name))
+
+organizations$uni_country_cordis <- organizations$uni_country
+
+nrow(organizations)
+
+colnames(organizations)
 
 
+#Se hace la equivalencia de nombres con el diccionario
+organizations <- left_join(organizations,
+                           dicc_unis[,c("uni_country_cordis","uni_country_rank")],
+                           by="uni_country_cordis")
+
+
+#Se hace la búsqueda del ranking con el nombre del diccionario:
+
+organizations$uni_country2 <- organizations$uni_country 
+organizations$uni_country <- organizations$uni_country_rank
+ranking2022$ranking_p_top1_2 <- ranking2022$ranking_p_top1
+
+
+nrow(organizations)
+organizations <- left_join(organizations,
+                           ranking2022[,c("uni_country","ranking_p_top1_2")],
+                           by="uni_country")
+
+organizations$uni_country <- organizations$uni_country2
+organizations$uni_country2 <- NULL
+
+organizations_ranking_dicc <- filter(organizations,!is.na(organizations$ranking_p_top1_2))
+
+nrow(organizations_ranking_dicc)
+
+organizations_ranking_dicc <- distinct(organizations_ranking_dicc,
+                                       organisationID,.keep_all = TRUE)
+
+
+#Se hace la unión con la base de H2020_orgs
+nrow(H2020_organization)
+H2020_organization <- left_join(H2020_organization,
+                                organizations_ranking_dicc[,c("organisationID","ranking_p_top1_2")]
+                                ,by="organisationID")
+nrow(H2020_organization)
 
 
 
 ### 2.2.4. Unión de las diferentes búsquedas ----
 
-H2020_organization$ranking <- case_when(
-  !is.na(H2020_organization$ranking_p_top1) ~ H2020_organization$ranking_p_top1)
-  #!is.na(H2020_organization$ranking2) ~ H2020_organization$ranking2)
+H2020_organization$ranking_top1 <- case_when(
+  !is.na(H2020_organization$ranking_p_top1) ~ H2020_organization$ranking_p_top1,
+  !is.na(H2020_organization$ranking_p_top1_2) ~ H2020_organization$ranking_p_top1_2)
 
 H2020_organization$ranking_p_top1 <- NULL
-#H2020_organization$ranking2 <- NULL
+H2020_organization$ranking_p_top1_2 <- NULL
 
 
 H2020_organization$ranking_top50 <- if_else(
-  H2020_organization$ranking<=50,TRUE,FALSE,missing= FALSE)
+  H2020_organization$ranking_top1 <= 50,TRUE,FALSE,missing= FALSE)
+
+H2020_organization$ranking_EU_top50 <- if_else(
+  H2020_organization$ranking_top1 < 250 & 
+    H2020_organization$country_cat != "NonEU" ,TRUE,FALSE,missing= FALSE)
 
 
 
@@ -484,24 +599,18 @@ H2020_organization <- left_join(H2020_organization,
                                 by="organisationID")
 nrow(H2020_organization)
 
-### 2.3.3. Join con diccionario de nombres de universidades ----
 
-
-
-
-### 2.3.4. Unión de las diferentes búsquedas ----
+### 2.3.3. Unión de las diferentes búsquedas ----
 
 H2020_organization$num_patentes <- case_when(
   !is.na(H2020_organization$num_patent) ~ H2020_organization$num_patent,
   !is.na(H2020_organization$num_patent2) ~ H2020_organization$num_patent2)
-  #!is.na(H2020_organization$num_patent2) ~ H2020_organization$num_patent2)
 
 H2020_organization$num_patent <- NULL
 H2020_organization$num_patent2 <- NULL
-#H2020_organization$num_patent3 <- NULL
 
 
-### 2.3.5. Proxy: patentes en FP7 ----
+### 2.3.4. Proxy: patentes en FP7 ----
 
 
 colnames(FP7_Irps)
@@ -648,60 +757,6 @@ rm(tipos_socios_consorc_w)
 ## 3.3. Características de países representados ----
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-cordis_countries <- cordis_countries[cordis_countries$language=="en",]
-
-EU_13 <- c(
-  "Bulgaria",
-  "Croatia",
-  "Cyprus",
-  "Czechia",
-  "Estonia",
-  "Hungary",
-  "Latvia",
-  "Lithuania",
-  "Malta",
-  "Poland",
-  "Romania",
-  "Slovakia",
-  "Slovenia")
-
-EU_15 <- c(
-  "Austria",
-  "Belgium",
-  "Denmark",
-  "Finland",
-  "France",
-  "Germany", 
-  "Greece",
-  "Ireland",
-  "Italy",
-  "Luxembourg",
-  "Netherlands",
-  "Portugal",
-  "Spain",
-  "Sweden",
-  "United Kingdom")
-
-
-cordis_countries$country_cat <- case_when(
-  cordis_countries$name %in% EU_13 ~ "EU13",
-  cordis_countries$name %in% EU_15 ~ "EU15",
-  TRUE ~ "NonEU"
-)
-
-table(cordis_countries$country_cat)
-
-colnames(cordis_countries) <- c("country",
-                                "isoCode",
-                                "country_name",
-                                "language",
-                                "country_cat")
-
-#Se hace un join con la tabla de organizaciones para añadirle esta información
-H2020_organization <- left_join(H2020_organization,
-                                cordis_countries[,c("country","country_name","country_cat")],
-                                by="country")
-
 
 #Se hacen las cuentas agregadas según la categoría de país (EU13 / EU15 / Non-EU)
 
@@ -744,89 +799,89 @@ rm(tipos_paises_consorc)
 
 ### 3.4.1. Tutorial----
 
-# install.packages("igraph", dependencies=TRUE)
-# library(igraph)
-
-set.seed(8675309)
-
-g <- sample_pa(50)
-plot(g)
-
-g1 <- growing.random.game(50, m=2)
-g1 <- simplify(g1) # "Simplify" removes loops and multiple edges.
-plot(g1)
-
-g2 <- erdos.renyi.game(50, 5/50)
-degree_distribution(g2)
-plot(g2)
-
-#Remember, the degree of each node is just a count of how many edges attach to it. 
-#The distribution of the degree measure is a record of how frequently each To see 
-#the same information graphically, try displaying it as a histogram.
-hist(degree.distribution(g2))
-
-#el <- read.table(file.choose(), sep=",")) # Read in the table
-#el <- as.matrix(el) 
-el <- as.matrix(read.table(file.choose(), sep=",")) # Load your edgelist as a two column matrix.
-g3 <- graph.edgelist(el, directed=TRUE)    # Convert it into an igraph object.
-plot(g3)
-V(g3)$name
-
-fix(g3) # Use caution. It can cause grief if you change anything manually.
-print(g3, e=TRUE, v=TRUE)
-plot(g3)
-plot(g3, edge.width=E(g)$weight) # To plot using edge weights
-
-
-actors <- data.frame(name=c("Alice", "Bob", "Cecil", "David", "Esmeralda"),
-                     age=c(48,33,45,34,21),
-                     gender=c("F","M","F","M","F"))
-
-relations <- data.frame(from=c("Bob", "Cecil", "Cecil", "David", "David", "Esmeralda"),
-                        to=c("Alice", "Bob", "Alice", "Alice", "Bob", "Alice"),
-                        same.dept=c(FALSE,FALSE,TRUE,FALSE,FALSE,TRUE),
-                        friendship=c(4,5,5,2,1,1), 
-                        advice=c(4,5,5,4,2,3))
-
-g4 <- graph.data.frame(relations, directed=TRUE, vertices=actors)
-plot(g4)
-
-deg <- degree(g4)            # Degree centrality
-
-clo <- closeness(g4)         # Closeness centrality
-
-bet <- betweenness(g4)       # Betweenness centrality
-
-eig <- evcent(g4)$vector     # Eigenvector centrality
-
-name <- get.vertex.attribute(g4, "name")
-
-table <- cbind(name, deg, clo, bet, eig)
-                    
-table
-
-hist(degree.distribution(g4)) 
-
-object.name <- cbind(V(g4)$id, deg, clo, bet, eig)
-write.csv(object.name, file=paste("centrality.csv", sep=","))
-
-# First, merge vectors into table, store as 'cent'
-cent <- cbind(deg, clo, bet, eig)
-
-# Next, save them as a .csv file.
-write.csv(cent, file="Centrality.csv") # You may want to choose a working directory first.
-# If you need to find out where it went, use: getwd()  
-getwd()  
-
-plot(g4) 
-tkplot(g4)
-rglplot(g4, layout=layout.fruchterman.reingold(g, dim=3))
-
-
-### Leer la base
-#setwd("~/GitHub/MECA_BD_Final_project")
-
-#prueba <-readRDS("./stores/H2020_orgs.rds") #174.005 Obs 29 var
+# # install.packages("igraph", dependencies=TRUE)
+# # library(igraph)
+# 
+# set.seed(8675309)
+# 
+# g <- sample_pa(50)
+# plot(g)
+# 
+# g1 <- growing.random.game(50, m=2)
+# g1 <- simplify(g1) # "Simplify" removes loops and multiple edges.
+# plot(g1)
+# 
+# g2 <- erdos.renyi.game(50, 5/50)
+# degree_distribution(g2)
+# plot(g2)
+# 
+# #Remember, the degree of each node is just a count of how many edges attach to it. 
+# #The distribution of the degree measure is a record of how frequently each To see 
+# #the same information graphically, try displaying it as a histogram.
+# hist(degree.distribution(g2))
+# 
+# #el <- read.table(file.choose(), sep=",")) # Read in the table
+# #el <- as.matrix(el) 
+# el <- as.matrix(read.table(file.choose(), sep=",")) # Load your edgelist as a two column matrix.
+# g3 <- graph.edgelist(el, directed=TRUE)    # Convert it into an igraph object.
+# plot(g3)
+# V(g3)$name
+# 
+# fix(g3) # Use caution. It can cause grief if you change anything manually.
+# print(g3, e=TRUE, v=TRUE)
+# plot(g3)
+# plot(g3, edge.width=E(g)$weight) # To plot using edge weights
+# 
+# 
+# actors <- data.frame(name=c("Alice", "Bob", "Cecil", "David", "Esmeralda"),
+#                      age=c(48,33,45,34,21),
+#                      gender=c("F","M","F","M","F"))
+# 
+# relations <- data.frame(from=c("Bob", "Cecil", "Cecil", "David", "David", "Esmeralda"),
+#                         to=c("Alice", "Bob", "Alice", "Alice", "Bob", "Alice"),
+#                         same.dept=c(FALSE,FALSE,TRUE,FALSE,FALSE,TRUE),
+#                         friendship=c(4,5,5,2,1,1), 
+#                         advice=c(4,5,5,4,2,3))
+# 
+# g4 <- graph.data.frame(relations, directed=TRUE, vertices=actors)
+# plot(g4)
+# 
+# deg <- degree(g4)            # Degree centrality
+# 
+# clo <- closeness(g4)         # Closeness centrality
+# 
+# bet <- betweenness(g4)       # Betweenness centrality
+# 
+# eig <- evcent(g4)$vector     # Eigenvector centrality
+# 
+# name <- get.vertex.attribute(g4, "name")
+# 
+# table <- cbind(name, deg, clo, bet, eig)
+#                     
+# table
+# 
+# hist(degree.distribution(g4)) 
+# 
+# object.name <- cbind(V(g4)$id, deg, clo, bet, eig)
+# write.csv(object.name, file=paste("centrality.csv", sep=","))
+# 
+# # First, merge vectors into table, store as 'cent'
+# cent <- cbind(deg, clo, bet, eig)
+# 
+# # Next, save them as a .csv file.
+# write.csv(cent, file="Centrality.csv") # You may want to choose a working directory first.
+# # If you need to find out where it went, use: getwd()  
+# getwd()  
+# 
+# plot(g4) 
+# tkplot(g4)
+# rglplot(g4, layout=layout.fruchterman.reingold(g, dim=3))
+# 
+# 
+# ### Leer la base
+# #setwd("~/GitHub/MECA_BD_Final_project")
+# 
+# #prueba <-readRDS("./stores/H2020_orgs.rds") #174.005 Obs 29 var
 
 
 
@@ -1016,7 +1071,7 @@ colSums(is.na(H2020_organization))
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 3.5. Experiencia de trabajo previo ("Acquaintance") del consorcio ----
+## 3.5. Experiencia de trabajo previo ("Acquaintance") del consorcio ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #Acquaintance:
@@ -1503,13 +1558,16 @@ H2020_project <- left_join(H2020_project,suma_ranking_top50,by="id")
 rm(suma_ranking_top50)
 
 
+suma_ranking_EU_top50 <- H2020_organization %>% 
+  group_by(projectID) %>% 
+  summarize(rank_EU_top50_consorc = sum(ranking_EU_top50))
 
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 5.4. Características de ranking ----
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+colnames(suma_ranking_EU_top50)[1] <- "id"
 
-export(H2020_organization,"./stores/H2020_organizations.rds")
-export(H2020_project,"./stores/H2020_projects.rds")
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,suma_ranking_EU_top50,by="id")
+
+rm(suma_ranking_EU_top50)
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1528,8 +1586,12 @@ H2020_project <- left_join(H2020_project,suma_evid_patent,by="id")
 rm(suma_evid_patent)
 
 
-# #TEMPORAL: EXPORTACIÓN PRELIMINAR
-export(H2020_organization,"./stores/H2020_orgs.rds")
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 5.6. Exportación ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+export(H2020_organization,"./stores/H2020_organizations.rds")
 export(H2020_project,"./stores/H2020_projects.rds")
 
 
@@ -1540,14 +1602,14 @@ export(H2020_project,"./stores/H2020_projects.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 6.1. Creación de los consorcios aleatorios ----
+## 6.1. Creación de los consorcios aleatorios ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 6.2. Enriquecer la información de los consorcios (sección 3) ----
+## 6.2. Enriquecer la información de los consorcios (sección 3) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -1566,7 +1628,7 @@ export(H2020_project,"./stores/H2020_projects.rds")
 # 7.1 Separación de bases de datos y preparación
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+train <- H2020_organization
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

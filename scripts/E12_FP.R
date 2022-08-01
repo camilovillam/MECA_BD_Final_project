@@ -916,10 +916,11 @@ relationships <- prueba2 %>% dplyr::select(to=organisationID.x, from=organisatio
 # Ahora extraemos todas las organizaciones que tienen relaciones
 # Para identificar los nodos de una mejor manera de llegar a
 # graficarlos usando labels.
-orgs <- prueba2 %>% distinct(organisationID.x, shortName.x, activityType.x)
+orgs <- prueba2 %>% distinct(organisationID.x, shortName.x, activityType.x, country.x)
 orgs <- orgs %>% dplyr::select(organisationID=organisationID.x,
                shortName=shortName.x,
-               activityType=activityType.x)
+               activityType=activityType.x,
+               country=country.x)
 
 # Creamos el grafo y generamos las nuevas variables.
 gpruebados <- graph.data.frame(relationships, directed=FALSE, vertices=orgs)
@@ -1605,8 +1606,113 @@ export(H2020_project,"./stores/H2020_projects.rds")
 ## 6.1. Creación de los consorcios aleatorios ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+# Condiciones:
+# 1. Paises europeos
+# 2. Mínimo 3 paises dentro del consorcio no tienen el mismo país
 
+H2020 <-readRDS("./stores/H2020_orgs.rds")
 
+orgs <- H2020 %>% 
+  filter(country_cat != 'NonEU') %>%
+  distinct(organisationID, name, activityType, country)
+
+# 6.1.1. Pruebas con sampling ----
+
+# Grupos por país.
+orgs %>% group_by(country)
+
+# Muestras por país.
+new_df <- orgs %>% group_by(country) %>% sample_n(2, replace = TRUE)
+
+# Otros métodos: Usando data.table (no funciona).
+library("data.table")
+new_df <- orgs[, .SD[sample(x = .N, size = 5)], by=col1]
+
+# Otros métodos: Usando plyr (no funciona).
+library("plyr")
+new_df <- ddply(data_frame,.(country),function(x) x[sample(nrow(x),5),])
+
+# 6.1.2. For loop con memoria. ----
+new_df <- data.frame(matrix(ncol = 5, nrow = 0))
+colnames(new_df) <- c('organisationID', 'name', 'activityType', 'country', 'consortium')
+
+# Crear muestra de todo el dataframe para dejarlo desordenado.
+orgs <- orgs[sample(1:nrow(orgs)), ]
+
+# Memoria de ids usados.
+used <- data.frame(matrix(ncol = 1, nrow = 0))
+colnames(used) <- c('organisationID')
+
+consortiumCounter <- 1
+for (i in 1:nrow(orgs)) {
+  if (orgs[i,1] %in% used$organisationID) {
+    next
+  }
+  
+  # Consorcio actual.
+  currGroup <- data.frame(matrix(ncol = 4, nrow = 0))
+  colnames(currGroup) <- c('organisationID', 'name', 'activityType', 'country')
+  
+  # Paises del consorcio actual.
+  currCountries <- data.frame(matrix(ncol = 1, nrow = 0))
+  colnames(currCountries) <- c('country')
+  
+  # Agregar organización actual al consorcio.
+  currGroup[nrow(currGroup) + 1, ] <- orgs[i,]
+  currCountries[nrow(currCountries) + 1, ] <- orgs[i,4]
+  used[nrow(used) + 1, ] <- orgs[i,1]
+  
+  # Iterar en el resto de la lista.
+  for (j in i:nrow(orgs)) {
+    # Solo pueden pertenecer al consorcio si no están en otro consorcio
+    # y no están en el mismo país.
+    if (orgs[j,4] %in% currCountries$country || orgs[j,1] %in% used$organisationID) {
+      next
+    }
+    
+    # Agregar organización actual al consorcio.
+    currGroup[nrow(currGroup) + 1, ] <- orgs[j,]
+    currCountries[nrow(currCountries) + 1, ] <- orgs[i,4]
+    used[nrow(used) + 1, ] <- orgs[j,1]
+    if (nrow(currGroup) >= 3) {
+      # Cuando ya hayan al menos 3, se agrega el consorcio al data frame.
+      for (k in 1:nrow(currGroup)) {
+        org <- currGroup[k, ]
+        row <- c(org$organisationID, org$name, org$activityType, org$country)
+        row <- append(row, consortiumCounter)
+        new_df[nrow(new_df) + 1,] <- row
+      }
+      consortiumCounter <- consortiumCounter + 1
+      break
+    }
+  }
+}
+
+saveRDS(new_df, './stores/consorcios_europeos_aleatorios.rds')
+
+# Agregar consorcios fuera de EU a los nuevos consorcios.
+
+# Obtener paises no euro.
+nonEurOrgs <- H2020 %>% 
+  filter(country_cat == 'NonEU') %>%
+  distinct(organisationID, name, activityType, country)
+
+# Desordenar lista.
+nonEurOrgs <- nonEurOrgs[sample(1:nrow(nonEurOrgs)), ]
+
+nonEurOrgs <- nonEurOrgs %>% 
+  mutate(consortium=sample(1:consortiumCounter, nrow(nonEurOrgs), replace=TRUE))
+
+consorcios_test <- rbind(new_df, nonEurOrgs)
+
+# Convertir consorcios en numérico.
+consorcios_test <- consorcios_test %>% transform(consortium = as.numeric(consortium))
+
+# Máximo número de consorcios.
+max(consorcios_test$consortium)
+
+# Guardar base.
+saveRDS(consorcios_test, './stores/consorcios_test.rds')
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## 6.2. Enriquecer la información de los consorcios (sección 3) ----

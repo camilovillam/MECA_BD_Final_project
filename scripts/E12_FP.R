@@ -2097,12 +2097,24 @@ reg_indice_integrado <- lm(form_indice_integrado,data=Tr_train)
 stargazer(reg_indice_integrado,type="text")
 
 
+mean(reg_articl$residuals^2)
+mean(reg_ECcontrib$residuals^2)
+mean(reg_entreg$residuals^2)
+mean(reg_indice$residuals^2) 
+mean(reg_indice_integrado$residuals^2) 
+mean(reg_lnECcontrib$residuals^2)
+mean(reg_lntotalcost$residuals^2) 
+mean(reg_otras_pubs$residuals^2)  
+mean(reg_patentes$residuals^2)
+mean(reg_tot_publs$residuals^2)
+mean(reg_totalcost$residuals^2)
+
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 9. CÁLCULO ÍNDICE AGREGADO ----
+# 9. PREDICCIÓN ÍNDICE AGREGADO ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+#Hacer las predicciones en test
 
 
 

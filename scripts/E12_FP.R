@@ -1441,6 +1441,7 @@ rm(entregabl_proy_H2020_w)
 ## 4.4. Recursos del proyecto ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+H2020_project <- import("./stores/H2020_projects.rds")
 
 class(H2020_project$totalCost)
 class(H2020_project$ecMaxContribution)
@@ -1452,6 +1453,14 @@ H2020_project$ecMaxContribution <- gsub(",","\\.",H2020_project$ecMaxContributio
 class(H2020_project$totalCost) <- "numeric"
 class(H2020_project$ecMaxContribution) <- "numeric"
 
+#Corrección del Total cost cuando es 0
+#Hay varios registros con total cost = 0 pero EC contribution!=0.
+#Se le imputa la EC contribution al total cost
+
+sum(H2020_project$totalCost==0 & H2020_project$ecMaxContribution > 0)
+H2020_project$totalCost[H2020_project$totalCost==0] <- H2020_project$ecMaxContribution[H2020_project$totalCost==0]
+sum(H2020_project$totalCost==0 & H2020_project$ecMaxContribution > 0)
+
 H2020_project$ln_totalCost <- log(H2020_project$totalCost)
 H2020_project$ln_ecMaxContribution <- log(H2020_project$ecMaxContribution)
 
@@ -1460,6 +1469,27 @@ H2020_project$EC_cost_share <- H2020_project$ecMaxContribution/H2020_project$tot
 
 colSums(is.na(H2020_project))
 
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 4.5. Índice integrado del proyecto ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+colnames(H2020_project)
+nrow(H2020_project)
+colSums(is.na(H2020_project))
+
+H2020_project$indice_integrado <- 
+  ((H2020_project$num_patentes * 0.35 + 
+     H2020_project$NPub_peerArticle * 0.35 +
+     H2020_project$ecMaxContribution * 0.20 +
+     (H2020_project$NPub_total - H2020_project$NPub_peerArticle) * 0.05 +
+     H2020_project$NEntreg_total*0.05)/H2020_project$totalCost)*100
+  
+sum(is.na(H2020_project$indice_integrado))
+
+
+summary(H2020_project$indice_integrado)
+hist(H2020_project$indice_integrado,breaks=c(0:25))
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1754,6 +1784,11 @@ end - start
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 7. ESTADÍSTICAS DESCRIPTIVAS CON LA BASE COMPLETA ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
 
 
 # 

@@ -20,6 +20,10 @@ rm(list=ls())
 
 ##Carga de librerías ----
 install.packages("pacman")
+
+
+start <- Sys.time()
+
 library(pacman)
 
 p_load(rio,
@@ -1724,8 +1728,9 @@ saveRDS(consorcios_test, './stores/consorcios_test.rds')
 
 
 
+end <- Sys.time()
 
-
+end - start
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 7. MODELOS DE REGRESIÓN / ESTIMACIÓN VARIABLES Y ----

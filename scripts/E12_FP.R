@@ -37,7 +37,7 @@ p_load(rio,
        arsenal,
        janitor,
        tidyverse,
-       tibble,
+       #tibble,
        gamlr,
        skimr, 
        caret,
@@ -192,8 +192,8 @@ cordis_funding_scheme <-  import(filenames[5])
 #patentes_reg <- import("./stores/OECD_REGPAT/202202_PCT_App_reg.txt")
 #export(patentes_reg,"./stores/OECD_REGPAT/202202_PCT_App_reg.rds")
 
-patentes_reg <- import("./stores/OECD_REGPAT/202202_PCT_App_reg.rds")
-head(patentes_reg)
+#patentes_reg <- import("./stores/OECD_REGPAT/202202_PCT_App_reg.rds")
+#head(patentes_reg)
 
 #Cargar la base de datos armonizada de nombres de postulantes (HAN)
 #HAN: Harmonised Applicant Names
@@ -416,7 +416,6 @@ nrow(ranking2022)
 
 # ranking2022 <- distinct(ranking2022,University, .keep_all = TRUE)
 
-
 #Ranking con base en el número total de publicaciones:
 ranking2022 <- ranking2022[order(ranking2022$impact_P,decreasing = TRUE),]
 ranking2022 <- ranking2022 %>% mutate(ranking_p= 1:n())
@@ -428,9 +427,9 @@ ranking2022 <- ranking2022 %>% mutate(ranking_p_top1= 1:n())
 
 ### 2.2.2. Join por nombre directo con CWTS Ranking ----
 
-organizations <- left_join(organizations,
-                           cordis_countries[,c("country","country_name")],
-                           by="country")
+# organizations <- left_join(organizations,
+#                            cordis_countries[,c("country","country_name")],
+#                            by="country")
 
 organizations$uni_country <- toupper(paste0(organizations$name,"_",
                                             organizations$country_name))
@@ -894,7 +893,7 @@ rm(tipos_paises_consorc)
 
 prueba <- H2020_organization
 
-#library(dplyr)
+library(dplyr)
 
 # Identificamos cuántos cores tiene nuestra máquina
 n_cores <- detectCores()
@@ -1599,6 +1598,13 @@ rm(suma_evid_patent)
 ## 5.6. Exportación ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#Control de NA
+nrow(H2020_project)
+colSums(is.na(H2020_project))
+
+H2020_project$coord_ranking_p1[is.na(H2020_project$coord_ranking_p1)] <- 0
+
+
 export(H2020_organization,"./stores/H2020_organizations.rds")
 export(H2020_project,"./stores/H2020_projects.rds")
 
@@ -1721,32 +1727,68 @@ max(consorcios_test$consortium)
 # Guardar base.
 saveRDS(consorcios_test, './stores/consorcios_test.rds')
 
+
+end <- Sys.time()
+end - start
+
+#rm(list=ls())
+#gc()
+
+
+
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## 6.2. Enriquecer la información de los consorcios (sección 3) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+# consorcios_test <- import("./stores/consorcios_test.rds")
 
 
 
-end <- Sys.time()
 
-end - start
 
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 7. MODELOS DE REGRESIÓN / ESTIMACIÓN VARIABLES Y ----
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 7.1 Separación de bases de datos y preparación
+# 7. ESTADÍSTICAS DESCRIPTIVAS CON LA BASE COMPLETA ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#train <- H2020_organization
+
+# 
+# proyectos <- import("./stores/H2020_projects.rds")
+# organizaciones <- import("./stores/H2020_organizations.rds")
+# 
+# 
+# 
+
+
+
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 7.2 Ensayos preliminares
+# 8. MODELOS DE REGRESIÓN / ESTIMACIÓN VARIABLES Y ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 8.1 Separación de bases de datos y preparación
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+# train <- proyectos
+# 
+# colnames(train)
+# # 
+# train <- train[ , -c(legalBasis,"ecSignatureDate","nature",objective,
+#                      contentUpdateDate,rcn,grantDoi,
+#   
+# )]
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 8.2 Ensayos preliminares
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 # 
@@ -1777,36 +1819,28 @@ end - start
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 7.3 Modelos: patentes
+# 8.3 Modelos: patentes
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 7.4 Modelos: publicaciones
+# 8.4 Modelos: publicaciones
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 7.5 Modelos: otros entregables
+# 8.5 Modelos: otros entregables
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 7.6 Modelos: recursos del proyecto
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-
-
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 7.7 Modelos: estimación puntaje de calificación
+# 8.6 Modelos: recursos del proyecto
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -1814,18 +1848,15 @@ end - start
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 8. CÁLCULO ÍNDICE AGREGADO ----
+# 8.7 Modelos: estimación puntaje de calificación
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
 
 
-
-
-
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 9. CLASIFICACIÓN ----
+# 9. CÁLCULO ÍNDICE AGREGADO ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -1836,7 +1867,18 @@ end - start
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 10. PREDICCIÓN FINAL CON BASE DE TEST ----
+# 10. CLASIFICACIÓN ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 11. PREDICCIÓN FINAL CON BASE DE TEST ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

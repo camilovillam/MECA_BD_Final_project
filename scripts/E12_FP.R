@@ -188,7 +188,8 @@ cordis_funding_scheme <-  import(filenames[5])
 #patentes_reg <- import("./stores/OECD_REGPAT/202202_PCT_App_reg.txt")
 #export(patentes_reg,"./stores/OECD_REGPAT/202202_PCT_App_reg.rds")
 
-#patentes_reg <- import("./stores/OECD_REGPAT/202202_PCT_App_reg.rds")
+patentes_reg <- import("./stores/OECD_REGPAT/202202_PCT_App_reg.rds")
+head(patentes_reg)
 
 #Cargar la base de datos armonizada de nombres de postulantes (HAN)
 #HAN: Harmonised Applicant Names
@@ -231,7 +232,7 @@ table(duplicated(num_patents))
 colnames(num_patents) <- c("name","country","num_patent")
 num_patents$name <- toupper(num_patents$name)
 
-export(num_patents,"./stores/OECD_REGPAT/Cuenta_patentes.rds")
+#export(num_patents,"./stores/OECD_REGPAT/Cuenta_patentes.rds")
 
 
 
@@ -292,7 +293,7 @@ H2020_organization$num_coord_FP7[is.na(H2020_organization$num_coord_FP7)] <- 0
 
 table(H2020_organization$role)
 
-#Se calculan el número de participaciones y de coordinaciones en el FP7
+#Se calculan el número de participaciones y de coordinaciones en H2020
 org_particip_H2020 <- H2020_organization %>% 
   group_by(organisationID) %>% 
   summarize(num_particip_H2020= sum(role %in% c("participant",
@@ -315,11 +316,29 @@ colSums(is.na(H2020_organization))
 ## 2.2. Ranking CWTS Leiden 2022 ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+### 2.2.1. Preparación de información ----
 
 #Listado único de organizaciones
 
-#OJO CON NÚMEROS DE COLUMNA
-organizations <- distinct(H2020_organization[,3:14])
+organizations <- distinct(H2020_organization[,-(1:2)])
+colnames(organizations)
+nrow(organizations)
+
+organizations[,c("contactForm",
+"contentUpdateDate",
+"SME",
+"rcn",
+"order",
+"role",
+"ecContribution",
+"netEcContribution",
+"totalCost",
+"geolocation",
+"active",
+"endOfParticipation")] <- list(NULL)
+
+organizations <- distinct(organizations)
+nrow(organizations)
 
 #Del archivo cargado del ranking se deja solo la última versión
 
@@ -327,7 +346,13 @@ ranking2022 <- CWTS_ranking[CWTS_ranking$Period=="2017–2020" &
                               CWTS_ranking$Field =="All sciences" &
                               CWTS_ranking$Frac_counting==1,]
 
+ranking2022$uni_country <- paste0(ranking2022$University,"_",ranking2022$Country)
+ranking2022$uni_country <- toupper(ranking2022$uni_country)
+
 nrow(ranking2022)
+
+# ranking2022 <- distinct(ranking2022,University, .keep_all = TRUE)
+
 
 #Ranking con base en el número total de publicaciones:
 ranking2022 <- ranking2022[order(ranking2022$impact_P,decreasing = TRUE),]
@@ -338,17 +363,35 @@ ranking2022 <- ranking2022[order(ranking2022$P_top1,decreasing = TRUE),]
 ranking2022 <- ranking2022 %>% mutate(ranking_p_top1= 1:n())
 
 
-ranking2022$name <- toupper(ranking2022$University)
+### 2.2.2. Join por nombre directo con CWTS Ranking ----
 
+organizations <- left_join(organizations,
+                           cordis_countries[,c("country","country_name")],
+                           by="country")
 
-organizations_ranking <- left_join(organizations,ranking2022[,c("name","ranking_p","ranking_p_top1")],by="name")
+organizations$uni_country <- toupper(paste0(organizations$name,"_",
+                                            organizations$country_name))
 
-universities <- organizations_ranking[organizations_ranking$activityType %in% c("HES"),]
+nrow(organizations)
+organizations <- left_join(organizations,
+                           ranking2022[,c("uni_country","ranking_p","ranking_p_top1")],
+                           by="uni_country")
+
+universities <- organizations[organizations$activityType %in% c("HES"),]
 
 colSums(is.na(universities))
 nrow(universities)
 
-print(paste0("El porcentaje de universidades encontradas es ", round(100 - (3681/4157)*100,1), " %"))
+print(paste0("El porcentaje de universidades encontradas es ",
+             round(100 - (sum(is.na(universities$ranking_p_top1))/nrow(universities))*100,1),
+             " %"))
+
+
+nrow(H2020_organization)
+H2020_organization <- left_join(H2020_organization,organizations[,c("organisationID","ranking_p_top1")]
+                                ,by="organisationID")
+nrow(H2020_organization)
+
 
 
 #PROBLEMA COMPLEJO, NAME DISAMBIGUATION.
@@ -358,6 +401,7 @@ print(paste0("El porcentaje de universidades encontradas es ", round(100 - (3681
 # si está en el top 50 del CWTS (ver paper).
 # En este caso, podemos crear un diccionario de nombres para las 50 universidades
 # top.
+
 # Posible trabajo futuro: incluir todas las universidades, adelantar trabajo
 # de corrección de nombres.
 
@@ -366,13 +410,36 @@ print(paste0("El porcentaje de universidades encontradas es ", round(100 - (3681
 #export(ranking2022,"./stores/Nombres_universidades/Ranking 2022.xlsx")
 
 
+### 2.2.3. Join con diccionario de nombres de universidades ----
+
+
+
+
+
+
+### 2.2.4. Unión de las diferentes búsquedas ----
+
+H2020_organization$ranking <- case_when(
+  !is.na(H2020_organization$ranking_p_top1) ~ H2020_organization$ranking_p_top1)
+  #!is.na(H2020_organization$ranking2) ~ H2020_organization$ranking2)
+
+H2020_organization$ranking_p_top1 <- NULL
+#H2020_organization$ranking2 <- NULL
+
+
+H2020_organization$ranking_top50 <- if_else(
+  H2020_organization$ranking<=50,TRUE,FALSE,missing= FALSE)
+
+
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## 2.3. Patentes OECD REGPAT ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+### 2.3.1. Join por nombre directo con OECD REGPAT ----
+
+
 #Puede ser complejo sacar la info de la OCDE por los nombres
-#Idea de Proxy: patentes en los FP anteriores
 
 nrow(organizations)
 
@@ -392,28 +459,89 @@ print(paste0("El porcentaje de organizaciones con patentes encontradas es ",
              round(100 - (sum(is.na(organizations$num_patent)) / 
                             nrow(organizations))*100,1), " %"))
 
-uni_REC_patentes <- filter(organizations,organizations$activityType %in% c("HES","REC"))
-
-organizations_pat <- filter(organizations,!(is.na(organizations$num_patent)))
-organizations_no_pat <- filter(organizations,(is.na(organizations$num_patent)))
-
-
-# export(unis_sin_patentes,"./stores/Nombres_universidades/Unis_sin_patentes.xlsx")
-# export(num_patents,".stores/Nombres_universidades/Listado_patentes.xlsx")
+nrow(H2020_organization)
+H2020_organization <- left_join(H2020_organization,organizations[,c("organisationID","num_patent")]
+                           ,by="organisationID")
+nrow(H2020_organization)
 
 
-#Se reitera el problema 
+### 2.3.2. Join con nombre corto de la misma base de datos ----
 
-#Intentar por lo menos tener las patentes de los 50 top coordinadores
-#y los 50 top participantes (experiencia FP7 + experiencia H2020).
+nomb_cortos <- import("./stores/Nombres_universidades/Diccionario_Patentes.xlsx")
+colnames(nomb_cortos)[2] <- "name_pais"
+
+nomb_cortos <- left_join(nomb_cortos,num_patents[,c("name_pais","num_patent")]
+                         ,by="name_pais")
+
+nrow(nomb_cortos)
+colSums(is.na(nomb_cortos))
+colnames(nomb_cortos)[3] <- "num_patent2"
+nomb_cortos <- distinct(nomb_cortos)
+
+nrow(H2020_organization)
+H2020_organization <- left_join(H2020_organization,
+                                nomb_cortos[,c("organisationID","num_patent2")],
+                                by="organisationID")
+nrow(H2020_organization)
+
+### 2.3.3. Join con diccionario de nombres de universidades ----
 
 
 
 
-#Alternativa: patentes en FP7 (disponible)
+### 2.3.4. Unión de las diferentes búsquedas ----
+
+H2020_organization$num_patentes <- case_when(
+  !is.na(H2020_organization$num_patent) ~ H2020_organization$num_patent,
+  !is.na(H2020_organization$num_patent2) ~ H2020_organization$num_patent2)
+  #!is.na(H2020_organization$num_patent2) ~ H2020_organization$num_patent2)
+
+H2020_organization$num_patent <- NULL
+H2020_organization$num_patent2 <- NULL
+#H2020_organization$num_patent3 <- NULL
 
 
+### 2.3.5. Proxy: patentes en FP7 ----
 
+
+colnames(FP7_Irps)
+table(FP7_Irps$patentType)
+
+
+#Se calcula el número de patentes por organizacion en FP7
+patentes_proy_FP7 <- FP7_Irps %>% 
+  group_by(organisationID) %>% 
+  summarize(num_patentes_FP7 = n())
+
+class(patentes_proy_FP7$organisationID) <- "character"
+
+
+#Se une con la base de organizaciones H2020
+nrow(H2020_organization)
+H2020_organization <- left_join(H2020_organization,patentes_proy_FP7,by="organisationID")
+nrow(H2020_organization)
+
+rm(patentes_proy_FP7)
+
+#A los que quedan con NA se les imputa 0 patentes
+H2020_organization$num_patentes_FP7[is.na(H2020_organization$num_patentes_FP7)] <- 0
+
+summary(H2020_organization$num_patentes_FP7)
+hist(H2020_organization$num_patentes_FP7)
+
+
+### 2.3.6. Proxy final: dummy "evidencia de patentes" ----
+
+#En este caso, lo mejor es manejar una dummy que se llame "evidencia de patentes".
+#Puede ser bastante imprecisa, teniendo en cuenta que no se hayan todos los nombres.
+
+
+H2020_organization$evidencia_patente <- if_else(
+  (H2020_organization$num_patentes_FP7 > 0) | (H2020_organization$num_patentes_FP7 >0),
+  TRUE,FALSE,missing=FALSE)
+
+table(H2020_organization$evidencia_patente)
+table(H2020_organization$evidencia_patente,H2020_organization$role)
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1297,13 +1425,12 @@ H2020_coordinators <- H2020_organization[H2020_organization$role=="coordinator",
 
 colnames(H2020_coordinators)
 
-
-#OJO: LUEGO HAY QUE INCORPORAR LAS VARIABLES DE PATENTES Y RANKING
+H2020_organization$ranking_top50
 
 H2020_coordinators <- 
-  H2020_coordinators[,c("projectID","num_coord_FP7","country_cat")]
+  H2020_coordinators[,c("projectID","num_coord_FP7","country_cat","ranking_top50","evidencia_patente")]
 
-colnames(H2020_coordinators) <- c("id","exp_coord_FP7","coord_country_cat")
+colnames(H2020_coordinators) <- c("id","exp_coord_FP7","coord_country_cat","coord_top50_rank","coord_patentes")
 
 nrow(H2020_project)
 H2020_project <- left_join(H2020_project,H2020_coordinators,by="id")
@@ -1364,15 +1491,41 @@ rm(network_metrics_H2020)
 ## 5.4. Características de ranking ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+suma_ranking_top50 <- H2020_organization %>% 
+  group_by(projectID) %>% 
+  summarize(ranking_top50_consorc = sum(ranking_top50))
+
+colnames(suma_ranking_top50)[1] <- "id"
+
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,suma_ranking_top50,by="id")
+
+rm(suma_ranking_top50)
 
 
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 5.4. Características de ranking ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+export(H2020_organization,"./stores/H2020_organizations.rds")
+export(H2020_project,"./stores/H2020_projects.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ## 5.5. Características de patentes ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+suma_evid_patent <- H2020_organization %>% 
+  group_by(projectID) %>% 
+  summarize(evid_patent_consorc = sum(evidencia_patente))
 
+colnames(suma_evid_patent)[1] <- "id"
+
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,suma_evid_patent,by="id")
+
+rm(suma_evid_patent)
 
 
 # #TEMPORAL: EXPORTACIÓN PRELIMINAR

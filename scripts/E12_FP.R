@@ -179,7 +179,7 @@ FP7_programmes <-         import(filenames[2])
 #H2020_topic_keywords <-   import(filenames[3])
 cordis_org_activity <-    import(filenames[4])
 cordis_funding_scheme <-  import(filenames[5])
-
+cordis_funding_scheme_names <-  import(filenames[6])
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1359,6 +1359,9 @@ H2020_project$NPub_total <- rowSums(H2020_project[,c(
   "NPub_Books",
   "NPub_BookChapt")])
 
+
+H2020_project$NPub_resto <- H2020_project$NPub_total -  H2020_project$NPub_peerArticle
+
 rm(public_proy_H2020)
 rm(public_proy_H2020_w)
 
@@ -1479,17 +1482,16 @@ nrow(H2020_project)
 colSums(is.na(H2020_project))
 
 H2020_project$indice_integrado <- 
-  ((H2020_project$num_patentes * 0.35 + 
-     H2020_project$NPub_peerArticle * 0.35 +
-     H2020_project$ecMaxContribution * 0.20 +
-     (H2020_project$NPub_total - H2020_project$NPub_peerArticle) * 0.05 +
-     H2020_project$NEntreg_total*0.05)/H2020_project$totalCost)*100
+  log((H2020_project$num_patentes * 0.40 + 
+     H2020_project$NPub_peerArticle * 0.40 +
+     H2020_project$NPub_total - H2020_project$NPub_peerArticle * 0.1 +
+     H2020_project$NEntreg_total*0.1)*H2020_project$EC_cost_share)
   
 sum(is.na(H2020_project$indice_integrado))
 
-
+summary(H2020_project$ln_totalCost)
 summary(H2020_project$indice_integrado)
-hist(H2020_project$indice_integrado,breaks=c(0:25))
+hist(H2020_project$indice_integrado)
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1621,6 +1623,36 @@ nrow(H2020_project)
 H2020_project <- left_join(H2020_project,suma_evid_patent,by="id")
 
 rm(suma_evid_patent)
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 5.6. Características del tipo de proyecto (funding scheme) ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+colnames(H2020_project)
+table(H2020_project$fundingScheme)
+
+esquemas_financ <- H2020_project %>% 
+  group_by(fundingScheme) %>% 
+  summarize(n())
+
+colnames(cordis_funding_scheme)[1] <- "fundingScheme"
+
+esquemas_financ <- left_join(esquemas_financ,
+                             cordis_funding_scheme_names[,c("fundingScheme",
+                                                            "fundingScheme_name",
+                                                            "fS_type")],
+                             by="fundingScheme")
+
+nrow(H2020_project)
+H2020_project <- left_join(H2020_project,cordis_funding_scheme_names[,c("fundingScheme",
+                                                        "fundingScheme_name",
+                                                        "fS_type")],
+                   by="fundingScheme")
+
+
+H2020_project$consorcUnit <- if_else(H2020_project$consorc_size==1,TRUE,FALSE)
+
 
 
 
@@ -1809,14 +1841,14 @@ organizaciones <- import("./stores/H2020_organizations.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 8.1 Separación de bases de datos y preparación
+## 8.1 Separación de bases de datos y preparación ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#train <- H2020_project
 train <- proyectos
  
 colnames(train)
-table(train$fundingScheme)
- 
+
 train[ , c("legalBasis","ecSignatureDate","nature","objective",
                     "contentUpdateDate","rcn","grantDoi","masterCall","subCall",
                     "topics")] <- list(NULL)
@@ -1825,7 +1857,7 @@ export(train,"./stores/train.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 8.2 Ensayos preliminares
+## 8.2 Ensayos preliminares ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 # 
@@ -1856,28 +1888,54 @@ export(train,"./stores/train.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 8.3 Modelos: patentes
+## 8.3 Modelos: patentes ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+form_patentes
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 8.4 Modelos: publicaciones ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+colnames(train)
+
+#Lógica:
+
+#Características de tamaño y conformación
+#Características de países representados
+#Caraceterísticas de familiaridad y visibilidad de la red
+#Características del coordinador
+#Características de excelencia cientifica del consorcio (ranking)
+#Características de patentes del consorcio.
+
+regresores <- "~ consorc_size +
+                          share_unis + share_resCen + share_compan +
+                          share_EU13 + share_EU15 + share_nonEU + 
+                          acquaintance + netw_degree + netw_eigenvector + 
+                          coord_exper_FP7 + coord_country_cat + 
+                          coord_ranking_p1 + coord_top50_rank + 
+                          coord_top50_EU + coord_evid_patentes + 
+                          ranking_top50_consorc + rank_EU_top50_consorc +
+                          evid_patent_consorc"
+
+form_articl <- as.formula(paste0("NPub_peerArticle",regresores))
+form_tot_publs <- as.formula(paste0("NPub_total",regresores))
+
+
+reg_articl <- lm(form_articl,data=train)
+reg_tot_publs <- lm(form_tot_publs,data=train)
+
+stargazer(reg_articl,reg_tot_publs,type="text")
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 8.5 Modelos: otros entregables ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 8.4 Modelos: publicaciones
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 8.5 Modelos: otros entregables
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-
-
-#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 8.6 Modelos: recursos del proyecto
+## 8.6 Modelos: recursos del proyecto ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -1885,12 +1943,28 @@ export(train,"./stores/train.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 8.7 Modelos: estimación puntaje de calificación
+## 8.7 Modelos: estimación índice de calificación ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+# #Solo por probar: regresión del índice calculado
+# 
 
-
-
+# 
+# train$regPat <- (train$num_patentes / train$totalCost)*0.35
+# train$regArts <- (train$NPub_peerArticle / train$totalCost)*0.35
+# train$regECfinanc <- (train$ecMaxContribution / train$totalCost)*0.2
+# train$regPublics <- (train$NPub_resto / train$totalCost)*0.05
+# train$regEntreg <- (train$NEntreg_total / train$totalCost)*0.05
+# 
+# form_indice <- as.formula("indice_integrado ~ regPat +
+#                           regArts +
+#                           regECfinanc + 
+#                           regPublics +
+#                           regEntreg")
+# 
+# reg_indice <- lm(form_indice,data=train)
+# 
+# stargazer(reg_indice,type="text")
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 9. CÁLCULO ÍNDICE AGREGADO ----

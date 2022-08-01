@@ -1771,7 +1771,7 @@ end - start
 ## 6.2. Enriquecer la información de los consorcios (sección 3) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-# consorcios_test <- import("./stores/consorcios_test.rds")
+consorcios_test <- import("./stores/consorcios_test.rds")
 
 
 
@@ -1792,8 +1792,8 @@ end - start
 
 
 # 
-# proyectos <- import("./stores/H2020_projects.rds")
-# organizaciones <- import("./stores/H2020_organizations.rds")
+proyectos <- import("./stores/H2020_projects.rds")
+organizaciones <- import("./stores/H2020_organizations.rds")
 # 
 # 
 # 
@@ -1812,14 +1812,16 @@ end - start
 # 8.1 Separación de bases de datos y preparación
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-# train <- proyectos
-# 
-# colnames(train)
-# # 
-# train <- train[ , -c(legalBasis,"ecSignatureDate","nature",objective,
-#                      contentUpdateDate,rcn,grantDoi,
-#   
-# )]
+train <- proyectos
+ 
+colnames(train)
+table(train$fundingScheme)
+ 
+train[ , c("legalBasis","ecSignatureDate","nature","objective",
+                    "contentUpdateDate","rcn","grantDoi","masterCall","subCall",
+                    "topics")] <- list(NULL)
+
+export(train,"./stores/train.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

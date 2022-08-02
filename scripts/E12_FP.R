@@ -1923,6 +1923,16 @@ consorcios_test <- import("./stores/consorcios_test.rds")
 
 
 
+tipo_proyecto (1-15)
+
+EC_% - 80 - 100%
+summary(train$EC_cost_share)
+
+Valor_total
+Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+3.938e+03 1.729e+05 9.984e+05 2.366e+06 2.498e+06 1.330e+09 
+
+
 
 
 
@@ -1934,7 +1944,7 @@ organizaciones <- import("./stores/H2020_organizations.rds")
 # 
 # 
 
-
+table(H2020_project$fS_type)
 
 
 
@@ -2111,6 +2121,183 @@ mean(reg_totalcost$residuals^2)
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 8.7 Modelos random forest para todas las variables Y ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+regresores_rf <- "~ consorc_size + consorcUnit + fS_type +
+                          share_unis + share_resCen + 
+                          share_EU13 + share_EU15 + share_nonEU + 
+                          acquaintance + log_eigenvector + 
+                          coord_exper_FP7 + coord_country_cat + 
+                          coord_ranking_p1 + coord_top50_rank + 
+                          coord_top50_EU + coord_evid_patentes + 
+                          ranking_top50_consorc + rank_EU_top50_consorc +
+                          evid_patent_consorc"
+
+
+form_rf_lntotalcost <- as.formula(paste0("ln_totalCost",regresores_rf))
+form_rf_totalcost <-  as.formula(paste0("totalCost",regresores_rf))
+form_rf_lnECcontrib <- as.formula(paste0("ln_ecMaxContribution",regresores_rf))
+form_rf_ECcontrib <-  as.formula(paste0("ecMaxContribution",regresores_rf))
+form_rf_patentes <- as.formula(paste0("num_patentes",regresores_rf))
+form_rf_articl <- as.formula(paste0("NPub_peerArticle",regresores_rf))
+form_rf_tot_publs <- as.formula(paste0("NPub_total",regresores_rf))
+form_rf_otras_pubs <- as.formula(paste0("NPub_resto",regresores_rf))
+form_rf_entreg <- as.formula(paste0("NEntreg_total",regresores_rf))
+form_rf_indice_integrado <- as.formula(paste0("indice_integrado_s",regresores_rf))
+
+
+Tr_train_forest <- Tr_train
+
+colSums(is.na(Tr_train_forest))
+
+Tr_train_forest$startDate <- NULL
+Tr_train_forest$endDate <- NULL 
+
+Tr_train_forest <- Tr_train_forest[complete.cases(Tr_train_forest), ] #No admite NAs
+nrow(Tr_train_forest)
+
+set.seed(100)
+
+control_rf <- trainControl(method='cv', 
+                           number=5,
+                           verbose=FALSE,
+                           savePredictions = T)
+
+mtry <- sqrt(19) #Número de predictores
+
+tunegrid_rf <- expand.grid(.mtry=mtry)
+
+#Se prepara PC para procesamiento paralelo:
+n_cores <- detectCores()
+n_cores
+cl <- makePSOCKcluster(n_cores-4) 
+registerDoParallel(cl)
+
+
+start <- Sys.time()
+
+#1
+forest_lntotalcost <- train(form_rf_lntotalcost, 
+                data=Tr_train_forest, 
+                method='rf',
+                trControl = control_rf,
+                na.action  = na.pass,
+                tuneGrid=tunegrid_rf)
+
+export(forest_lntotalcost,"./stores/modelos_entrenados/forest_lntotalcost.rds")
+print(Sys.time())
+
+#2
+forest_totalcost <- train(form_rf_totalcost, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+export(forest_totalcost,"./stores/modelos_entrenados/forest_totalcost.rds")
+print(Sys.time())
+
+#3
+forest_lnECcontrib <- train(form_rf_lnECcontrib, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+export(forest_lnECcontrib,"./stores/modelos_entrenados/forest_lnECcontrib.rds")
+print(Sys.time())
+
+#4
+forest_ECcontrib <- train(form_rf_ECcontrib, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+export(forest_ECcontrib,"./stores/modelos_entrenados/forest_ECcontrib.rds")
+print(Sys.time())
+
+#5
+forest_patentes <- train(form_rf_patentes, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+export(forest_patentes,"./stores/modelos_entrenados/forest_patentes.rds")
+print(Sys.time())
+
+#6
+forest_articl <- train(form_rf_articl, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+
+export(forest_articl,"./stores/modelos_entrenados/forest_articl.rds")
+print(Sys.time())
+
+#7
+forest_tot_publs <- train(form_rf_tot_publs, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+
+export(forest_tot_publs,"./stores/modelos_entrenados/forest_tot_publs.rds")
+print(Sys.time())
+
+#8
+forest_otras_pubs <- train(form_rf_otras_pubs, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+
+export(forest_otras_pubs,"./stores/modelos_entrenados/forest_otras_pubs.rds")
+print(Sys.time())
+
+#9
+forest_entreg <- train(form_rf_entreg, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+
+export(forest_entreg,"./stores/modelos_entrenados/forest_entreg.rds")
+print(Sys.time())
+
+#10
+forest_indice_integrado <- train(form_rf_indice_integrado, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+
+export(forest_indice_integrado,"./stores/modelos_entrenados/forest_indice_integrado.rds")
+
+end <- Sys.time()
+end - start
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 9. PREDICCIÓN ÍNDICE AGREGADO ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -2139,6 +2326,11 @@ mean(reg_totalcost$residuals^2)
 
 
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 12. ENSAYO TEST ORG ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+test_org <- import("./stores/test_org.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

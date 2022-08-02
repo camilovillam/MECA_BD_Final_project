@@ -1911,6 +1911,7 @@ end - start
 
 consorcios_test <- import("./stores/consorcios_test.rds")
 H2020_organizations <- import("./stores/H2020_organizations.rds")
+H2020_projects <- import("./stores/H2020_projects.rds")
 train <- import("./stores/train.rds")
 
 compare_df_cols(H2020_organizations, train)
@@ -1985,22 +1986,39 @@ rm(tamano_consorc)
 ## 6.2.5. Otras variables para test  ----
 
 set.seed(33)
-totalCost <- sample(c(3.938e+03,1.330e+09), size = 11415, replace = T) 
-fS_type <- sample(c(1,15), size = 11415, replace = T)        
-por_ecMaxContribution <- sample(c(0.8,1), size = 11415, replace = T)   
+totalCost <- sample(3.938e+03:1.330e+09, nrow(test), replace=TRUE) 
+fS_type <- sample(1:15, nrow(test), replace=TRUE)        
+por_ecMaxContribution <- sample(0.8:1, nrow(test), replace=TRUE)   
 
-prueba <- test
-
-prueba <-prueba %>%
+test <- test %>%
   mutate(totalCost=totalCost)%>%
   mutate(fS_type=fS_type)%>%
   mutate(por_ecMaxContribution=por_ecMaxContribution)%>%
   mutate(ecMaxContribution=por_ecMaxContribution*totalCost)
 
-prueba$por_ecMaxContribution <- NULL
-
+test$por_ecMaxContribution <- NULL
 
 rm(totalCost, fS_type, por_ecMaxContribution)
+
+#identificar etiquetas
+#table(H2020_projects$fS_type)
+
+1=COFUND
+2=COMPANY
+3=CSA
+4=EEN
+5=ERC
+6=ERC-ADG 
+7=ERC-COG
+8=ERC-STG
+9=ERC-SYG
+10=IA 
+11=MSCA-ITN
+12=MSCA_COFUND
+13=MSCA_IF
+14=MSCA_RISE
+15=RIA
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 7. ESTADÍSTICAS DESCRIPTIVAS CON LA BASE COMPLETA ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

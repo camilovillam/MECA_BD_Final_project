@@ -1946,6 +1946,7 @@ H2020org <-  H2020_organizations[, !names(H2020_organizations) %in% nonOrgCols] 
 #Se hacen join
 test_org <- consorcios_test %>% left_join(H2020org, by="organisationID")
 
+rm(nonOrgCols)
 
 ## 6.2.3. Asignarle el rol a test org  ----
 
@@ -1960,16 +1961,13 @@ consorcios_max$consortium<- NULL
 #Se hacen join
 test_org <- test_org %>% left_join(consorcios_max, by="organisationID")
 
-prueba <- test_org 
-#identificar los NAs
+#identificar los NAs y asignarles el role de patner
 
-prueba <- mutate_at(prueba, c("role"), ~replace(., is.na(.), "partner"))
-
+test_org <- mutate_at(test_org, c("role"), ~replace(., is.na(.), "partner"))
 
 rm(consorcios_max)
 
-
-#Se guarda base (por si acaso)
+#Se guarda base test_org con la variable role
 
 saveRDS(test_org, './stores/test_org.rds')
 
@@ -1984,8 +1982,25 @@ test <- tamano_consorc
 
 rm(tamano_consorc)
 
+## 6.2.5. Otras variables para test  ----
+
+set.seed(33)
+totalCost <- sample(c(3.938e+03,1.330e+09), size = 11415, replace = T) 
+fS_type <- sample(c(1,15), size = 11415, replace = T)        
+por_ecMaxContribution <- sample(c(0.8,1), size = 11415, replace = T)   
+
+prueba <- test
+
+prueba <-prueba %>%
+  mutate(totalCost=totalCost)%>%
+  mutate(fS_type=fS_type)%>%
+  mutate(por_ecMaxContribution=por_ecMaxContribution)%>%
+  mutate(ecMaxContribution=por_ecMaxContribution*totalCost)
+
+prueba$por_ecMaxContribution <- NULL
 
 
+rm(totalCost, fS_type, por_ecMaxContribution)
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 7. ESTADÍSTICAS DESCRIPTIVAS CON LA BASE COMPLETA ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

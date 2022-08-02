@@ -2005,8 +2005,23 @@ describe(particip_consorc_FP7)
 describe(coordin_consorc_FP7)
 
 ##Histograma de algunas variables
-hist(NPub_total, main = "Número total de Publicaciones", ylab = "Frecuencia", col = "lightblue")
+hist(NPub_total, main = "Número total de Publicaciones", ylab = "Publicaciones, col = "lightblue")
 
+hist(totalCost, main = "Costo Total", ylab = "", col = "lightblue")
+
+hist(consorc_size, main = "Tamaño del Consorcio", ylab = "", col = "lightblue")
+
+hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
+
+hist(numPartnPRC, main = "Número de socios asignados al sector privado ", ylab = "", col = "lightblue")
+hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
+hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
+hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
+hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
+hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
+hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
+hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
+hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
 
 
 proyectos <- import("./stores/H2020_projects.rds")

@@ -1795,7 +1795,7 @@ orgs <- H2020 %>%
   filter(country_cat != 'NonEU') %>%
   distinct(organisationID, name, activityType, country)
 
-# 6.1.1. Pruebas con sampling ----
+## 6.1.1. Pruebas con sampling ----
 
 # Grupos por país.
 orgs %>% group_by(country)
@@ -1811,7 +1811,7 @@ new_df <- orgs[, .SD[sample(x = .N, size = 5)], by=col1]
 library("plyr")
 new_df <- ddply(data_frame,.(country),function(x) x[sample(nrow(x),5),])
 
-# 6.1.2. For loop con memoria. ----
+## 6.1.2. For loop con memoria. ----
 new_df <- data.frame(matrix(ncol = 5, nrow = 0))
 colnames(new_df) <- c('organisationID', 'name', 'activityType', 'country', 'consortium')
 
@@ -1907,12 +1907,43 @@ end - start
 ## 6.2. Enriquecer la información de los consorcios (sección 3) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+## 6.2.1. Se cargan las bases de interés ----
+
 consorcios_test <- import("./stores/consorcios_test.rds")
+H2020_organizations <- import("./stores/H2020_organizations.rds")
+train <- import("./stores/train.rds")
 
+compare_df_cols(H2020_organizations, train)
 
+## 6.2.2. Base organizaciones con info de base H2020 y variable consortium ----
 
+#Se deja consorcios_test con OrgnisationID y consortium
+consorcios_test$name<- NULL 
+consorcios_test$activityType<- NULL 
+consorcios_test$country<- NULL 
 
+#Se quitan las columnas con info de proyectos y dejan solo las columas con info de organizaciones
+colnames(H2020_organizations)
 
+# Columnas
+nonOrgCols <- c(
+'projectID',
+'projectAcronym',
+'SME',
+'contactForm',
+'contentUpdateDate',
+'order',
+'role',
+'ecContribution',
+'netEcContribution',
+'totalCost',
+'endOfParticipation',
+'active'
+)
+
+H2020org <-  H2020_organizations[, !names(H2020_organizations) %in% nonOrgCols] %>% distinct()
+
+test_org <- consorcios_test %>% left_join(H2020org, by="organisationID")
 
 
 

@@ -1921,7 +1921,7 @@ consorcios_test <- import("./stores/consorcios_test.rds")
 # 7. ESTADÍSTICAS DESCRIPTIVAS CON LA BASE COMPLETA ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
+JORGE
 
 
 

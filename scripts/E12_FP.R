@@ -1968,6 +1968,8 @@ test_org <- mutate_at(test_org, c("role"), ~replace(., is.na(.), "partner"))
 
 rm(consorcios_max)
 
+test_org <-rename(test_org, id=consortium)
+
 #Se guarda base test_org con la variable role
 
 saveRDS(test_org, './stores/test_org.rds')
@@ -2003,21 +2005,29 @@ rm(totalCost, fS_type, por_ecMaxContribution)
 #identificar etiquetas
 #table(H2020_projects$fS_type)
 
-1=COFUND
-2=COMPANY
-3=CSA
-4=EEN
-5=ERC
-6=ERC-ADG 
-7=ERC-COG
-8=ERC-STG
-9=ERC-SYG
-10=IA 
-11=MSCA-ITN
-12=MSCA_COFUND
-13=MSCA_IF
-14=MSCA_RISE
-15=RIA
+test$fS_type <- factor(test$fS_type, 
+                             labels = c("COFUND",
+                                        "COMPANY",
+                                        "CSA",
+                                        "EEN",
+                                        "ERC",
+                                        "ERC-ADG", 
+                                        "ERC-COG",
+                                        "ERC-STG",
+                                        "ERC-SYG",
+                                        "IA", 
+                                        "MSCA-ITN",
+                                        "MSCA_COFUND",
+                                        "MSCA_IF",
+                                        "MSCA_RISE",
+                                        "RIA"))
+
+
+test <-rename(test, id=consortium)
+
+#Se guarda base test_org con la variable role
+
+saveRDS(test, './stores/test.rds')
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 7. ESTADÍSTICAS DESCRIPTIVAS CON LA BASE COMPLETA ----

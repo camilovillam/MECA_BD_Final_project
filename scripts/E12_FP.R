@@ -1943,8 +1943,46 @@ nonOrgCols <- c(
 
 H2020org <-  H2020_organizations[, !names(H2020_organizations) %in% nonOrgCols] %>% distinct()
 
+#Se hacen join
 test_org <- consorcios_test %>% left_join(H2020org, by="organisationID")
 
+
+## 6.2.3. Asignarle el rol a test org  ----
+
+#Se asigana el rol de coordinador al que tiene el max id del consorcio
+consorcios_max <- consorcios_test %>%
+  group_by(consortium) %>%
+  summarise(organisationID=max(organisationID)) %>%
+  mutate(role='coordinator')
+
+consorcios_max$consortium<- NULL 
+
+#Se hacen join
+test_org <- test_org %>% left_join(consorcios_max, by="organisationID")
+
+prueba <- test_org 
+#identificar los NAs
+
+prueba <- mutate_at(prueba, c("role"), ~replace(., is.na(.), "partner"))
+
+
+rm(consorcios_max)
+
+
+#Se guarda base (por si acaso)
+
+saveRDS(test_org, './stores/test_org.rds')
+
+
+## 6.2.4. Tamaño del consorcio para test  ----
+
+tamano_consorc <- test_org %>% 
+  group_by(consortium) %>%
+  summarize(consorc_size = n())
+
+test <- tamano_consorc
+
+rm(tamano_consorc)
 
 
 

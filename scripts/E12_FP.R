@@ -2004,18 +2004,13 @@ describe(coord_ranking_p1)
 describe(particip_consorc_FP7)
 describe(coordin_consorc_FP7)
 
-
+##Histograma de algunas variables
+hist(NPub_total, main = "Número total de Publicaciones", ylab = "Frecuencia", col = "lightblue")
 
 
 
 proyectos <- import("./stores/H2020_projects.rds")
 organizaciones <- import("./stores/H2020_organizations.rds")
-# 
-# 
-# 
-
-
-
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

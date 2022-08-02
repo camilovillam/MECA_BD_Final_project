@@ -1921,13 +1921,23 @@ consorcios_test <- import("./stores/consorcios_test.rds")
 # 7. ESTADÍSTICAS DESCRIPTIVAS CON LA BASE COMPLETA ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-JORGE
+train <- readRDS("~/Desktop/BIG_DATA/MECA_BD_Final_project/stores/train.rds")
+
+
+install.packages("pacman")
+
+## llamar librerias de la sesion
+require(pacman)
+p_load(rio, # import/export data
+       tidyverse, # tidy-data
+       skimr, # summary data
+       caret) # Classification And REgression Training
+skim(train$EC_cost_share)
+summary(EC_cost_share)
 
 
 
 
-
-# 
 proyectos <- import("./stores/H2020_projects.rds")
 organizaciones <- import("./stores/H2020_organizations.rds")
 # 

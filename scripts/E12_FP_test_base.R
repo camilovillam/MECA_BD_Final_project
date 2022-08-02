@@ -75,37 +75,37 @@ setwd("~/GitHub/MECA_BD_Final_project/")
 
 #### Importar todos los archivos de Excel del directorio:
 
-filenames <- list.files("./stores/EU_research_projects/H2020_projects", pattern="*.xlsx", full.names=TRUE)
-filenames
+# filenames <- list.files("./stores/EU_research_projects/H2020_projects", pattern="*.xlsx", full.names=TRUE)
+# filenames
+# 
+# 
+# #H2020_euroSciVoc <-     import(filenames[1])
+# #H2020_legalBasis <-     import(filenames[2])
+# H2020_organization <-   import(filenames[3])
+# H2020_programme <-      import(filenames[4])
+# H2020_project <-        import(filenames[5])
+# H2020_deliverables_1 <- import(filenames[6])
+# H2020_deliverables_2 <- import(filenames[7])
+# H2020_Irps <-           import(filenames[8])
+# H2020_publications_1 <- import(filenames[9])
+# H2020_publications_2 <- import(filenames[10])
+# H2020_publications_3 <- import(filenames[11])
+# H2020_publications_4 <- import(filenames[12])
+# H2020_publications_5 <- import(filenames[13])
+# #H2020_reportSummaries<- import(filenames[14])
+# #H2020_topics <-         import(filenames[15])
+# #H2020_webItem <-        import(filenames[16])
+# #H2020_webLink <-        import(filenames[17])
 
 
-#H2020_euroSciVoc <-     import(filenames[1])
-#H2020_legalBasis <-     import(filenames[2])
-H2020_organization <-   import(filenames[3])
-H2020_programme <-      import(filenames[4])
-H2020_project <-        import(filenames[5])
-H2020_deliverables_1 <- import(filenames[6])
-H2020_deliverables_2 <- import(filenames[7])
-H2020_Irps <-           import(filenames[8])
-H2020_publications_1 <- import(filenames[9])
-H2020_publications_2 <- import(filenames[10])
-H2020_publications_3 <- import(filenames[11])
-H2020_publications_4 <- import(filenames[12])
-H2020_publications_5 <- import(filenames[13])
-#H2020_reportSummaries<- import(filenames[14])
-#H2020_topics <-         import(filenames[15])
-#H2020_webItem <-        import(filenames[16])
-#H2020_webLink <-        import(filenames[17])
 
-
-
-#### Publicaciones:
-
-H2020_publications_list <- lapply(ls(pattern="^H2020_publications_"), function(x) get(x))
-H2020_publications <- bind_rows(H2020_publications_list)
-nrow(H2020_publications)
-
-rm(list=ls(pattern="^H2020_publications_"))
+# #### Publicaciones:
+# 
+# H2020_publications_list <- lapply(ls(pattern="^H2020_publications_"), function(x) get(x))
+# H2020_publications <- bind_rows(H2020_publications_list)
+# nrow(H2020_publications)
+# 
+# rm(list=ls(pattern="^H2020_publications_"))
 
 
 
@@ -133,6 +133,12 @@ rm(filenames)
 # 
 # saveRDS(H2020_deliverables,"H2020_deliverables.rds")
 # saveRDS(H2020_publications,"H2020_publications.rds")
+
+#CARGAR LAS BASES DE TESTS: ----
+
+H2020_organization <- import("./stores/Test_base/test_org.rds")
+  
+H2020_project <- import("./stores/Test_base/test_project.rds")
 
 
 
@@ -649,7 +655,7 @@ hist(H2020_organization$num_patentes_FP7)
 
 
 H2020_organization$evidencia_patente <- if_else(
-  (H2020_organization$num_patentes_FP7 > 0) | (H2020_organization$num_patentes_FP7 >0),
+  (H2020_organization$num_patentes > 0) | (H2020_organization$num_patentes_FP7 >0),
   TRUE,FALSE,missing=FALSE)
 
 table(H2020_organization$evidencia_patente)
@@ -718,6 +724,8 @@ rm(tamano_consorc)
 
 sum(is.na(H2020_organization$activityType))
 table(H2020_organization$activityType)
+
+colnames(H2020_organization)[2] <- "projectID"
 
 
 tipos_socios_consorc <- H2020_organization %>% 
@@ -1226,6 +1234,8 @@ H2020_acquaintance <- H2020_consortia_pairs %>%
 colnames(H2020_acquaintance) <- c("id","acquaintance")
 
 
+class(H2020_project$id) ="character"
+
 #Se agrega el acquaintance a la base de proyectos:
 
 nrow(H2020_project)
@@ -1603,6 +1613,8 @@ colnames(H2020_coordinators) <- c("id","coord_exper_FP7","coord_country_cat",
                                   "coord_ranking_p1","coord_top50_rank",
                                   "coord_top50_EU","coord_evid_patentes")
 
+class(H2020_coordinators$id) <- "character"
+
 nrow(H2020_project)
 H2020_project <- left_join(H2020_project,H2020_coordinators,by="id")
 
@@ -1621,6 +1633,8 @@ exp_prev_H2020 <- H2020_organization %>%
 
 colnames(exp_prev_H2020)[1] <- "id"
 colnames(exp_prev_H2020)
+
+class(exp_prev_H2020$id) <- "character"
 
 nrow(H2020_project)
 H2020_project <- left_join(H2020_project,exp_prev_H2020,by="id")
@@ -1651,6 +1665,8 @@ network_metrics_H2020 <- H2020_organization %>%
 colnames(network_metrics_H2020)[1] <- "id"
 colnames(network_metrics_H2020)
 
+class(network_metrics_H2020$id) <- "character"
+
 nrow(H2020_project)
 H2020_project <- left_join(H2020_project,network_metrics_H2020,by="id")
 
@@ -1668,6 +1684,9 @@ suma_ranking_top50 <- H2020_organization %>%
 
 colnames(suma_ranking_top50)[1] <- "id"
 
+class(suma_ranking_top50$id) <- "character"
+
+
 nrow(H2020_project)
 H2020_project <- left_join(H2020_project,suma_ranking_top50,by="id")
 
@@ -1680,6 +1699,7 @@ suma_ranking_EU_top50 <- H2020_organization %>%
 
 colnames(suma_ranking_EU_top50)[1] <- "id"
 
+class(suma_ranking_EU_top50$id) <- "character"
 nrow(H2020_project)
 H2020_project <- left_join(H2020_project,suma_ranking_EU_top50,by="id")
 
@@ -1695,6 +1715,9 @@ suma_evid_patent <- H2020_organization %>%
   summarize(evid_patent_consorc = sum(evidencia_patente))
 
 colnames(suma_evid_patent)[1] <- "id"
+
+class(suma_evid_patent$id) <- "character"
+
 
 nrow(H2020_project)
 H2020_project <- left_join(H2020_project,suma_evid_patent,by="id")
@@ -1771,8 +1794,8 @@ colSums(is.na(H2020_project))
 H2020_project$coord_ranking_p1[is.na(H2020_project$coord_ranking_p1)] <- 0
 
 
-export(H2020_organization,"./stores/H2020_organizations.rds")
-export(H2020_project,"./stores/H2020_projects.rds")
+export(H2020_organization,"./stores/Test_base/H2020_organizations_test.rds")
+export(H2020_project,"./stores//Test_base/H2020_projects_test.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1967,7 +1990,7 @@ train[ , c("legalBasis","ecSignatureDate","nature","objective",
                     "contentUpdateDate","rcn","grantDoi","masterCall","subCall",
                     "topics")] <- list(NULL)
 
-export(train,"./stores/train.rds")
+export(train,"./stores/train_TEST.rds")
 
 # Análisis preliminar: ¿correlación entre nuestro índice y el puntaje de expertos?
 cor(train$indice_integrado_s,train$expert_score_hat)

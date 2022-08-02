@@ -1958,8 +1958,41 @@ summary(numPartnPRC)
 skim(train$numPartnPRC)
 summary(consorc_size)
 
+##Otra manera con más información
 
-hist(consorc_size, main = "Cambiar color", ylab = "Frecuencia", col = "lightblue")
+install.packages("psych") 
+require(psych) 
+
+
+describe(totalCost)
+describe(consorc_size)
+describe(numPartnPRC)
+describe(ecMaxContribution)
+describe(numPartnREC)
+describe(numPartnPRC)
+describe(numPartnHES)
+describe(NumPartners_EU13)
+describe(NumPartners_EU15)
+describe(NumPartners_NonEU)
+describe(acquaintance)
+describe(num_patentes)
+describe(share_unis)
+describe(share_resCen)
+describe(share_compan)
+describe(share_EU13)
+describe(share_EU15)
+describe(share_nonEU)
+describe(NPub_peerArticle)
+describe(NPub_ConfProceed)
+describe(NPub_Other)
+describe(`NPub_non-peerArticle`)
+describe(NPub_ThesisDiss)
+describe(NPub_Books)
+describe()
+describe()
+describe()
+describe()
+
 
 
 

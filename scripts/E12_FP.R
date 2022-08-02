@@ -1932,9 +1932,34 @@ p_load(rio, # import/export data
        tidyverse, # tidy-data
        skimr, # summary data
        caret) # Classification And REgression Training
+
+
+##Resumen de las variables
+
 skim(train$EC_cost_share)
 summary(EC_cost_share)
 
+skim(train$EC_cost_share)
+summary(EC_cost_share)
+
+skim(train$totalCost)
+summary(totalCost)
+
+skim(train$ecMaxContribution)
+summary(ecMaxContribution)
+
+skim(train$consorc_size)
+summary(consorc_size)
+
+
+skim(train$numPartnPRC)
+summary(numPartnPRC)
+
+skim(train$numPartnPRC)
+summary(consorc_size)
+
+
+hist(consorc_size, main = "Cambiar color", ylab = "Frecuencia", col = "lightblue")
 
 
 

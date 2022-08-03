@@ -2289,13 +2289,432 @@ end <- Sys.time()
 end - start
 
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 8.8 Modelos OLS con CV para todas las variables Y ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+regresores <- "~ consorc_size + consorcUnit + fS_type +
+                          share_unis + share_resCen + 
+                          share_EU13 + share_EU15 + share_nonEU + 
+                          acquaintance + log_eigenvector + 
+                          coord_exper_FP7 + coord_country_cat + 
+                          coord_ranking_p1 + coord_top50_rank + 
+                          coord_top50_EU + coord_evid_patentes + 
+                          ranking_top50_consorc + rank_EU_top50_consorc +
+                          evid_patent_consorc"
+
+
+form_ln_totalCost <- as.formula(paste0("ln_totalCost",regresores))
+form_totalCost <-  as.formula(paste0("totalCost",regresores))
+form_ln_ecMaxContribution <- as.formula(paste0("ln_ecMaxContribution",regresores))
+form_ecMaxContribution <-  as.formula(paste0("ecMaxContribution",regresores))
+form_num_patentes <- as.formula(paste0("num_patentes",regresores))
+form_NPub_peerArticle <- as.formula(paste0("NPub_peerArticle",regresores))
+form_NPub_total <- as.formula(paste0("NPub_total",regresores))
+form_NPub_resto <- as.formula(paste0("NPub_resto",regresores))
+form_NEntreg_total <- as.formula(paste0("NEntreg_total",regresores))
+
+
+OLS_ln_totalCost <- train(form_ln_totalCost,
+                          data = Tr_train,
+                          trControl=trainControl(method="cv",number=5),
+                          na.action  = na.pass,
+                          method="lm")
+
+export(OLS_ln_totalCost,"./stores/modelos_entrenados/OLS_ln_totalCost.rds")
+
+OLS_totalCost <- train(form_totalCost,
+                       data = Tr_train,
+                       trControl=trainControl(method="cv",number=5),
+                       na.action  = na.pass,
+                       method="lm")
+
+export(OLS_totalCost,"./stores/modelos_entrenados/OLS_totalCost.rds")
+
+OLS_ln_ecMaxContribution <- train(form_ln_ecMaxContribution,
+                                  data = Tr_train,
+                                  trControl=trainControl(method="cv",number=5),
+                                  na.action  = na.pass,
+                                  method="lm")
+
+export(OLS_ln_ecMaxContribution,"./stores/modelos_entrenados/OLS_ln_ecMaxContribution.rds")
+
+OLS_ecMaxContribution <- train(form_ecMaxContribution,
+                               data = Tr_train,
+                               trControl=trainControl(method="cv",number=5),
+                               na.action  = na.pass,
+                               method="lm")
+
+export(OLS_ecMaxContribution,"./stores/modelos_entrenados/OLS_ecMaxContribution.rds")
+
+OLS_num_patentes <- train(form_num_patentes,
+                          data = Tr_train,
+                          trControl=trainControl(method="cv",number=5),
+                          na.action  = na.pass,
+                          method="lm")
+
+export(OLS_num_patentes,"./stores/modelos_entrenados/OLS_num_patentes.rds")
+
+OLS_NPub_peerArticle <- train(form_NPub_peerArticle,
+                              data = Tr_train,
+                              trControl=trainControl(method="cv",number=5),
+                              na.action  = na.pass,
+                              method="lm")
+
+export(OLS_NPub_peerArticle,"./stores/modelos_entrenados/OLS_NPub_peerArticle.rds")
+
+OLS_NPub_total <- train(form_NPub_total,
+                        data = Tr_train,
+                        trControl=trainControl(method="cv",number=5),
+                        na.action  = na.pass,
+                        method="lm")
+
+export(OLS_NPub_total,"./stores/modelos_entrenados/OLS_NPub_total.rds")
+
+OLS_NPub_resto <- train(form_NPub_resto,
+                        data = Tr_train,
+                        trControl=trainControl(method="cv",number=5),
+                        na.action  = na.pass,
+                        method="lm")
+
+export(OLS_NPub_resto,"./stores/modelos_entrenados/OLS_NPub_resto.rds")
+
+OLS_NEntreg_total <- train(form_NEntreg_total,
+                           data = Tr_train,
+                           trControl=trainControl(method="cv",number=5),
+                           na.action  = na.pass,
+                           method="lm")
+
+export(OLS_NEntreg_total,"./stores/modelos_entrenados/OLS_NEntreg_total.rds")
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 8.9 Modelos lasso con CV para todas las variables Y ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+control <- trainControl(method = "cv", number = 5,
+                        #summaryFunction = fiveStats, 
+                        #classProbs = TRUE,
+                        verbose=FALSE,
+                        savePredictions = T)
+
+
+lambda <- 10^seq(-2, 3, length = 200)
+
+
+lasso_ln_totalCost <- train(form_ln_totalCost,
+                            data = Tr_train,
+                            method = "glmnet",
+                            trControl = trainControl("cv", number = 5),
+                            na.action  = na.pass,
+                            tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                            preProcess = c("center", "scale"))
+
+export(lasso_ln_totalCost,"./stores/modelos_entrenados/lasso_ln_totalCost.rds")
+
+
+lasso_totalCost <- train(form_totalCost,
+                         data = Tr_train,
+                         method = "glmnet",
+                         trControl = trainControl("cv", number = 5),
+                         na.action  = na.pass,
+                         tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                         preProcess = c("center", "scale"))
+
+export(lasso_totalCost,"./stores/modelos_entrenados/lasso_totalCost.rds")
+
+
+lasso_ln_ecMaxContribution <- train(form_ln_ecMaxContribution,
+                                    data = Tr_train,
+                                    method = "glmnet",
+                                    trControl = trainControl("cv", number = 5),
+                                    na.action  = na.pass,
+                                    tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                                    preProcess = c("center", "scale"))
+
+export(lasso_ln_ecMaxContribution,"./stores/modelos_entrenados/lasso_ln_ecMaxContribution.rds")
+
+
+lasso_ecMaxContribution <- train(form_ecMaxContribution,
+                                 data = Tr_train,
+                                 method = "glmnet",
+                                 trControl = trainControl("cv", number = 5),
+                                 na.action  = na.pass,
+                                 tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                                 preProcess = c("center", "scale"))
+
+export(lasso_ecMaxContribution,"./stores/modelos_entrenados/lasso_ecMaxContribution.rds")
+
+
+lasso_num_patentes <- train(form_num_patentes,
+                            data = Tr_train,
+                            method = "glmnet",
+                            trControl = trainControl("cv", number = 5),
+                            na.action  = na.pass,
+                            tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                            preProcess = c("center", "scale"))
+
+export(lasso_num_patentes,"./stores/modelos_entrenados/lasso_num_patentes.rds")
+
+
+lasso_NPub_peerArticle <- train(form_NPub_peerArticle,
+                                data = Tr_train,
+                                method = "glmnet",
+                                trControl = trainControl("cv", number = 5),
+                                na.action  = na.pass,
+                                tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                                preProcess = c("center", "scale"))
+
+export(lasso_NPub_peerArticle,"./stores/modelos_entrenados/lasso_NPub_peerArticle.rds")
+
+
+lasso_NPub_total <- train(form_NPub_total,
+                          data = Tr_train,
+                          method = "glmnet",
+                          trControl = trainControl("cv", number = 5),
+                          na.action  = na.pass,
+                          tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                          preProcess = c("center", "scale"))
+
+export(lasso_NPub_total,"./stores/modelos_entrenados/lasso_NPub_total.rds")
+
+
+lasso_NPub_resto <- train(form_NPub_resto,
+                          data = Tr_train,
+                          method = "glmnet",
+                          trControl = trainControl("cv", number = 5),
+                          na.action  = na.pass,
+                          tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                          preProcess = c("center", "scale"))
+
+export(lasso_NPub_resto,"./stores/modelos_entrenados/lasso_NPub_resto.rds")
+
+
+lasso_NEntreg_total <- train(form_NEntreg_total,
+                             data = Tr_train,
+                             method = "glmnet",
+                             trControl = trainControl("cv", number = 5),
+                             na.action  = na.pass,
+                             tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                             preProcess = c("center", "scale"))
+
+export(lasso_NEntreg_total,"./stores/modelos_entrenados/lasso_NEntreg_total.rds")
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 8.10 Modelos ridge con CV para todas las variables Y ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+ridge_ln_totalCost <- train(form_ln_totalCost,
+                            data = Tr_train,
+                            method = "glmnet",
+                            trControl = trainControl("cv", number = 5),
+                            na.action  = na.pass,
+                            tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                            preProcess = c("center", "scale"))
+
+export(ridge_ln_totalCost,"./stores/modelos_entrenados/ridge_ln_totalCost.rds")
+
+
+ridge_totalCost <- train(form_totalCost,
+                         data = Tr_train,
+                         method = "glmnet",
+                         trControl = trainControl("cv", number = 5),
+                         na.action  = na.pass,
+                         tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                         preProcess = c("center", "scale"))
+
+export(ridge_totalCost,"./stores/modelos_entrenados/ridge_totalCost.rds")
+
+
+ridge_ln_ecMaxContribution <- train(form_ln_ecMaxContribution,
+                                    data = Tr_train,
+                                    method = "glmnet",
+                                    trControl = trainControl("cv", number = 5),
+                                    na.action  = na.pass,
+                                    tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                                    preProcess = c("center", "scale"))
+
+export(ridge_ln_ecMaxContribution,"./stores/modelos_entrenados/ridge_ln_ecMaxContribution.rds")
+
+
+ridge_ecMaxContribution <- train(form_ecMaxContribution,
+                                 data = Tr_train,
+                                 method = "glmnet",
+                                 trControl = trainControl("cv", number = 5),
+                                 na.action  = na.pass,
+                                 tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                                 preProcess = c("center", "scale"))
+
+export(ridge_ecMaxContribution,"./stores/modelos_entrenados/ridge_ecMaxContribution.rds")
+
+
+ridge_num_patentes <- train(form_num_patentes,
+                            data = Tr_train,
+                            method = "glmnet",
+                            trControl = trainControl("cv", number = 5),
+                            na.action  = na.pass,
+                            tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                            preProcess = c("center", "scale"))
+
+export(ridge_num_patentes,"./stores/modelos_entrenados/ridge_num_patentes.rds")
+
+
+ridge_NPub_peerArticle <- train(form_NPub_peerArticle,
+                                data = Tr_train,
+                                method = "glmnet",
+                                trControl = trainControl("cv", number = 5),
+                                na.action  = na.pass,
+                                tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                                preProcess = c("center", "scale"))
+
+export(ridge_NPub_peerArticle,"./stores/modelos_entrenados/ridge_NPub_peerArticle.rds")
+
+
+ridge_NPub_total <- train(form_NPub_total,
+                          data = Tr_train,
+                          method = "glmnet",
+                          trControl = trainControl("cv", number = 5),
+                          na.action  = na.pass,
+                          tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                          preProcess = c("center", "scale"))
+
+export(ridge_NPub_total,"./stores/modelos_entrenados/ridge_NPub_total.rds")
+
+
+ridge_NPub_resto <- train(form_NPub_resto,
+                          data = Tr_train,
+                          method = "glmnet",
+                          trControl = trainControl("cv", number = 5),
+                          na.action  = na.pass,
+                          tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                          preProcess = c("center", "scale"))
+
+export(ridge_NPub_resto,"./stores/modelos_entrenados/ridge_NPub_resto.rds")
+
+
+ridge_NEntreg_total <- train(form_NEntreg_total,
+                             data = Tr_train,
+                             method = "glmnet",
+                             trControl = trainControl("cv", number = 5),
+                             na.action  = na.pass,
+                             tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                             preProcess = c("center", "scale"))
+
+export(ridge_NEntreg_total,"./stores/modelos_entrenados/ridge_NEntreg_total.rds")
+
+ridge1 <- train(form_OLS2,
+                data = Tr_train,
+                method = "glmnet",
+                trControl = trainControl("cv", number = 5),
+                na.action  = na.pass,
+                tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                preProcess = c("center", "scale"))
+
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 8.11 Modelos Elastic net con CV para todas las variables Y ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+elnet_ln_totalCost <- train(form_ln_totalCost,
+                            data = Tr_train,
+                            method = "glmnet",
+                            trControl = trainControl("cv", number = 5),
+                            na.action  = na.pass,
+                            preProcess = c("center", "scale"))
+
+export(elnet_ln_totalCost,"./stores/modelos_entrenados/elnet_ln_totalCost.rds")
+
+
+elnet_totalCost <- train(form_totalCost,
+                         data = Tr_train,
+                         method = "glmnet",
+                         trControl = trainControl("cv", number = 5),
+                         na.action  = na.pass,
+                         preProcess = c("center", "scale"))
+
+export(elnet_totalCost,"./stores/modelos_entrenados/elnet_totalCost.rds")
+
+
+elnet_ln_ecMaxContribution <- train(form_ln_ecMaxContribution,
+                                    data = Tr_train,
+                                    method = "glmnet",
+                                    trControl = trainControl("cv", number = 5),
+                                    na.action  = na.pass,
+                                    preProcess = c("center", "scale"))
+
+export(elnet_ln_ecMaxContribution,"./stores/modelos_entrenados/elnet_ln_ecMaxContribution.rds")
+
+
+elnet_ecMaxContribution <- train(form_ecMaxContribution,
+                                 data = Tr_train,
+                                 method = "glmnet",
+                                 trControl = trainControl("cv", number = 5),
+                                 na.action  = na.pass,
+                                 preProcess = c("center", "scale"))
+
+export(elnet_ecMaxContribution,"./stores/modelos_entrenados/elnet_ecMaxContribution.rds")
+
+
+elnet_num_patentes <- train(form_num_patentes,
+                            data = Tr_train,
+                            method = "glmnet",
+                            trControl = trainControl("cv", number = 5),
+                            na.action  = na.pass,
+                            preProcess = c("center", "scale"))
+
+export(elnet_num_patentes,"./stores/modelos_entrenados/elnet_num_patentes.rds")
+
+
+elnet_NPub_peerArticle <- train(form_NPub_peerArticle,
+                                data = Tr_train,
+                                method = "glmnet",
+                                trControl = trainControl("cv", number = 5),
+                                na.action  = na.pass,
+                                preProcess = c("center", "scale"))
+
+export(elnet_NPub_peerArticle,"./stores/modelos_entrenados/elnet_NPub_peerArticle.rds")
+
+
+elnet_NPub_total <- train(form_NPub_total,
+                          data = Tr_train,
+                          method = "glmnet",
+                          trControl = trainControl("cv", number = 5),
+                          na.action  = na.pass,
+                          preProcess = c("center", "scale"))
+
+export(elnet_NPub_total,"./stores/modelos_entrenados/elnet_NPub_total.rds")
+
+
+elnet_NPub_resto <- train(form_NPub_resto,
+                          data = Tr_train,
+                          method = "glmnet",
+                          trControl = trainControl("cv", number = 5),
+                          na.action  = na.pass,
+                          preProcess = c("center", "scale"))
+
+export(elnet_NPub_resto,"./stores/modelos_entrenados/elnet_NPub_resto.rds")
+
+
+elnet_NEntreg_total <- train(form_NEntreg_total,
+                             data = Tr_train,
+                             method = "glmnet",
+                             trControl = trainControl("cv", number = 5),
+                             na.action  = na.pass,
+                             preProcess = c("center", "scale"))
+
+export(elnet_NEntreg_total,"./stores/modelos_entrenados/elnet_NEntreg_total.rds")
+
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 9. PREDICCIONES EN TR_TEST ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
 
 
 #En este caso tenemos varias variables Y:
@@ -2311,7 +2730,7 @@ end - start
 # tot_publs
 # otras_pubs
 # entreg
-# indice_integrado
+
 
 
 #Código para estimación
@@ -2353,22 +2772,12 @@ for (i in 1:length(archivos_modelos)){
 predicciones_tr_test <- bind_rows(pred_modelo, .id = "modelo_var")
 
 
-
-# predicciones_tr_test$modelo <- data.frame(
-#   str_split_fixed(predicciones_tr_test$modelo_var,"_",n=2)[,1])
-
 pred_tr_test_modelo <- str_split_fixed(predicciones_tr_test$modelo_var,"_",n=2)
 pred_tr_test_modelo <- data.frame(pred_tr_test_modelo)
 colnames(pred_tr_test_modelo) <- c("modelo","variable_y")
 
 predicciones_tr_test <- cbind(predicciones_tr_test,pred_tr_test_modelo)
 
-# 
-# colnames(predicciones_tr_test)[ncol(predicciones_tr_test)] <- "variable_y"
-# colnames(predicciones_tr_test)[ncol(predicciones_tr_test)-1] <- "modelo"
-
-# class(predicciones_tr_test$modelo) <- "character"
-# class(predicciones_tr_test$variable_y) <- "character"
 
 #Debo traer los datos reales de Tr_test:
                                   
@@ -2389,14 +2798,11 @@ valores_reales_tr_test <- Tr_test[,c(
 valores_reales_tr_test <- valores_reales_tr_test %>% 
   pivot_longer(!id, names_to="variable_y", values_to = "valor_real")
 
-# valores_reales_tr_test$id_var <- paste0(valores_reales_tr_test$id,"_",
-#                                         valores_reales_tr_test$variable_y)
-# 
-# predicciones_tr_test$id_var <- paste0(predicciones_tr_test$id,"_",
-#                                       predicciones_tr_test$variable_y)
 
 colnames(predicciones_tr_test)
 colnames(valores_reales_tr_test)
+
+#Hago join entre las dos bases:
 
 nrow(predicciones_tr_test)
 predicciones_tr_test <- left_join(predicciones_tr_test,valores_reales_tr_test,
@@ -2414,7 +2820,7 @@ resumen_modelos_MSE <-  predicciones_tr_test %>%
   group_by(variable_y,modelo) %>% 
   summarize(MSE = mean(squared_error))
 
-
+export(resumen_modelos_MSE,"./views/Resumen modelos MSE.xlsx")
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 10. CLASIFICACIÓN ----

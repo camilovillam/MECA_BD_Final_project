@@ -2057,6 +2057,15 @@ hist(coord_exper_FP7, main = "Experiencia del coordinador en coordinación de pr
 
 hist(coord_ranking_p1, main = "Posición del coordinador en el ranking GWTS Leiden 2022", ylab = "", col = "lightblue")
 
+hist(particip_consorc_FP7, main = "Experiencia del coordinador en coordinación de proyectos del FP7", ylab = "", col = "lightblue")
+
+hist(particip_consorc_FP7, main = "Experiencia de los miembros del consorcio de participación en proyectos del FP7", ylab = "", col = "lightblue")
+
+hist(coordin_consorc_FP7, main = "Experiencia de los miembros del consorcio de participación en proyectos del FP7
+     Experiencia de los miembros del consorcio de coordinación en proyectos del FP7", ylab = "", col = "lightblue")
+
+
+
 proyectos <- import("./stores/H2020_projects.rds")
 organizaciones <- import("./stores/H2020_organizations.rds")
 

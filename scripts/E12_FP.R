@@ -22,11 +22,11 @@ rm(list=ls())
 install.packages("pacman")
 
 
-start <- Sys.time()
-
 library(pacman)
 
-p_load(rio,
+ 
+p_load(psych,
+       rio,
        igraph,
        doParallel,
        gtsummary,
@@ -2029,25 +2029,16 @@ test <-rename(test, id=consortium)
 
 saveRDS(test, './stores/test.rds')
 
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 7. ESTADÍSTICAS DESCRIPTIVAS CON LA BASE COMPLETA ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-train <- readRDS("~/Desktop/BIG_DATA/MECA_BD_Final_project/stores/train.rds")
+train <- readRDS("./stores/train.rds")
 
-
-install.packages("pacman")
-
-## llamar librerias de la sesion
-require(pacman)
-p_load(rio, # import/export data
-       tidyverse, # tidy-data
-       skimr, # summary data
-       caret) # Classification And REgression Training
-
-
-
-##Resumen de las variables
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 7.1. Resumen de las variables ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 skim(train$EC_cost_share)
 summary(EC_cost_share)
@@ -2073,10 +2064,6 @@ summary(consorc_size)
 
 
 ##Otra manera con más información
-
-install.packages("psych") 
-require(psych) 
-
 
 describe(totalCost)
 describe(consorc_size)
@@ -2118,8 +2105,11 @@ describe(coord_ranking_p1)
 describe(particip_consorc_FP7)
 describe(coordin_consorc_FP7)
 
-##Histograma de algunas variables
-hist(NPub_total, main = "Número total de Publicaciones", ylab = "Publicaciones, col = "lightblue")
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 7.2. Histogramas de las variables ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+hist(NPub_total, main = "Número total de Publicaciones", ylab = "Publicaciones", col = "lightblue")
 
 hist(totalCost, main = "Costo Total", ylab = "", col = "lightblue")
 
@@ -2180,10 +2170,6 @@ hist(coordin_consorc_FP7, main = "Experiencia de los miembros del consorcio de p
 
 
 
-proyectos <- import("./stores/H2020_projects.rds")
-organizaciones <- import("./stores/H2020_organizations.rds")
-
-
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 8. MODELOS DE REGRESIÓN / ESTIMACIÓN VARIABLES Y ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -2191,7 +2177,7 @@ organizaciones <- import("./stores/H2020_organizations.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.1 Separación de bases de datos y preparación ----
+## 8.1. Separación de bases de datos y preparación ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #train <- H2020_project
@@ -2254,7 +2240,7 @@ rm(list=c("other","split1","split2"))
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.2 Modelos: recursos del proyecto ----
+## 8.2. Modelos: recursos del proyecto ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -2301,7 +2287,7 @@ reg_ECcontrib <- lm(form_ECcontrib,data=Tr_train)
 stargazer(reg_lntotalcost,reg_totalcost,reg_lnECcontrib,reg_ECcontrib,type="text")
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.3 Modelos: patentes ----
+## 8.3. Modelos: patentes ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -2312,7 +2298,7 @@ reg_patentes <- lm(form_patentes,data=Tr_train)
 stargazer(reg_patentes,type="text")
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.4 Modelos: publicaciones ----
+## 8.4. Modelos: publicaciones ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 form_articl <- as.formula(paste0("NPub_peerArticle",regresores))
@@ -2326,7 +2312,7 @@ reg_otras_pubs <- lm(form_otras_pubs,data=Tr_train)
 stargazer(reg_articl,reg_tot_publs,reg_otras_pubs,type="text")
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.5 Modelos: otros entregables ----
+## 8.5. Modelos: otros entregables ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 form_entreg <- as.formula(paste0("NEntreg_total",regresores))
@@ -2337,7 +2323,7 @@ stargazer(reg_entreg,type="text")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.6 Modelos: estimación índice de calificación ----
+## 8.6. Modelos: estimación índice de calificación ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 colnames(train)
@@ -2363,7 +2349,7 @@ mean(reg_totalcost$residuals^2)
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.7 Modelos random forest para todas las variables Y ----
+## 8.7. Modelos random forest para todas las variables Y ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 regresores_rf <- "~ consorc_size + consorcUnit + fS_type +
@@ -2538,7 +2524,7 @@ end - start
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.8 Modelos OLS con CV para todas las variables Y ----
+## 8.8. Modelos OLS con CV para todas las variables Y ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 regresores <- "~ consorc_size + consorcUnit + fS_type +
@@ -2637,7 +2623,7 @@ export(OLS_NEntreg_total,"./stores/modelos_entrenados/OLS_NEntreg_total.rds")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.9 Modelos lasso con CV para todas las variables Y ----
+## 8.9. Modelos lasso con CV para todas las variables Y ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 control <- trainControl(method = "cv", number = 5,
@@ -2751,7 +2737,7 @@ export(lasso_NEntreg_total,"./stores/modelos_entrenados/lasso_NEntreg_total.rds"
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.10 Modelos ridge con CV para todas las variables Y ----
+## 8.10. Modelos ridge con CV para todas las variables Y ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -2865,7 +2851,7 @@ ridge1 <- train(form_OLS2,
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-## 8.11 Modelos Elastic net con CV para todas las variables Y ----
+## 8.11. Modelos Elastic net con CV para todas las variables Y ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

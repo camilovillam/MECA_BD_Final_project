@@ -2014,15 +2014,48 @@ hist(consorc_size, main = "Tamaño del Consorcio", ylab = "", col = "lightblue")
 hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
 
 hist(numPartnPRC, main = "Número de socios asignados al sector privado ", ylab = "", col = "lightblue")
-hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
-hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
-hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
-hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
-hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
-hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
-hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
-hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
 
+hist(numPartnREC, main = "Número de socios asignados al sector de investigación", ylab = "", col = "lightblue")
+
+hist(numPartnHES, main = "numPartnHES", ylab = "", col = "lightblue")
+
+hist(NumPartners_EU13, main = "Número de socios de países de Europa Central y del Este", ylab = "", col = "lightblue")
+
+hist(NumPartners_EU15, main = "Número de socios de países del grupo EU15", ylab = "", col = "lightblue")
+
+hist(share_nonEU, main = "Porcentaje de países no eurpeos", ylab = "", col = "lightblue")
+
+hist(NPub_peerArticle, main = "Número de publicaciones por artículo", ylab = "", col = "lightblue")
+
+hist(NPub_ThesisDiss, main = "Número de publicaciones de tesis", ylab = "", col = "lightblue")
+
+hist(NPub_Books, main = "Número de publicaciones de libros", ylab = "", col = "lightblue")
+
+hist(NPub_BookChapt, main = "Número de publicaciones de capítulos de libros", ylab = "", col = "lightblue")
+
+hist(NPub_total, main = "Número total de publicaciones", ylab = "", col = "lightblue")
+
+hist(NEntreg_Docs_reports, main = "Número de entrega de documentos y reportes", ylab = "", col = "lightblue")
+
+hist(NEntreg_Other, main = "Número de entrega de otros", ylab = "", col = "lightblue")
+
+hist(NEntreg_OpenResData, main = "Número de entregables", ylab = "", col = "lightblue")
+
+hist(NEntreg_Websites_videos, main = "Número de entregas de sitios web y videos", ylab = "", col = "lightblue")
+
+hist(NEntreg_Demos_Prototyp, main = "Número de entregables: Demos y prototipos", ylab = "", col = "lightblue")
+
+hist(NEntreg_total, main = "Número de entregas totales", ylab = "", col = "lightblue")
+
+hist(ln_totalCost, main = "Logaritmo de costo total", ylab = "", col = "lightblue")
+
+hist(ln_ecMaxContribution, main = "Log de contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
+
+hist(EC_cost_share, main = "Proporción de la contribución ($) de la Comisión Europea sobre el presupuesto total del proyecto", ylab = "", col = "lightblue")
+
+hist(coord_exper_FP7, main = "Experiencia del coordinador en coordinación de proyectos del FP7", ylab = "", col = "lightblue")
+
+hist(coord_ranking_p1, main = "Posición del coordinador en el ranking GWTS Leiden 2022", ylab = "", col = "lightblue")
 
 proyectos <- import("./stores/H2020_projects.rds")
 organizaciones <- import("./stores/H2020_organizations.rds")

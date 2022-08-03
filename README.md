@@ -15,4 +15,4 @@ Bienvenido al repositorio del `Proyecto final` del Equipo 12, resuelto por:
 - En la carpeta Script (del main branch) se encuentra el código comentado con la solución.
 
 
-Última edición:16/07/2022
+Última edición:02/08/2022

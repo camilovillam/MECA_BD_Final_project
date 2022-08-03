@@ -1795,7 +1795,7 @@ orgs <- H2020 %>%
   filter(country_cat != 'NonEU') %>%
   distinct(organisationID, name, activityType, country)
 
-# 6.1.1. Pruebas con sampling ----
+## 6.1.1. Pruebas con sampling ----
 
 # Grupos por país.
 orgs %>% group_by(country)
@@ -1811,7 +1811,7 @@ new_df <- orgs[, .SD[sample(x = .N, size = 5)], by=col1]
 library("plyr")
 new_df <- ddply(data_frame,.(country),function(x) x[sample(nrow(x),5),])
 
-# 6.1.2. For loop con memoria. ----
+## 6.1.2. For loop con memoria. ----
 new_df <- data.frame(matrix(ncol = 5, nrow = 0))
 colnames(new_df) <- c('organisationID', 'name', 'activityType', 'country', 'consortium')
 
@@ -1907,33 +1907,281 @@ end - start
 ## 6.2. Enriquecer la información de los consorcios (sección 3) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+## 6.2.1. Se cargan las bases de interés ----
+
 consorcios_test <- import("./stores/consorcios_test.rds")
+H2020_organizations <- import("./stores/H2020_organizations.rds")
+H2020_projects <- import("./stores/H2020_projects.rds")
+train <- import("./stores/train.rds")
+
+compare_df_cols(H2020_organizations, train)
+
+## 6.2.2. Base organizaciones con info de base H2020 y variable consortium ----
+
+#Se deja consorcios_test con OrgnisationID y consortium
+consorcios_test$name<- NULL 
+consorcios_test$activityType<- NULL 
+consorcios_test$country<- NULL 
+
+#Se quitan las columnas con info de proyectos y dejan solo las columas con info de organizaciones
+colnames(H2020_organizations)
+
+# Columnas
+nonOrgCols <- c(
+'projectID',
+'projectAcronym',
+'SME',
+'contactForm',
+'contentUpdateDate',
+'order',
+'role',
+'ecContribution',
+'netEcContribution',
+'totalCost',
+'endOfParticipation',
+'active'
+)
+
+H2020org <-  H2020_organizations[, !names(H2020_organizations) %in% nonOrgCols] %>% distinct()
+
+#Se hacen join
+test_org <- consorcios_test %>% left_join(H2020org, by="organisationID")
+
+rm(nonOrgCols)
+
+## 6.2.3. Asignarle el rol a test org  ----
+
+#Se asigana el rol de coordinador al que tiene el max id del consorcio
+consorcios_max <- consorcios_test %>%
+  group_by(consortium) %>%
+  summarise(organisationID=max(organisationID)) %>%
+  mutate(role='coordinator')
+
+consorcios_max$consortium<- NULL 
+
+#Se hacen join
+test_org <- test_org %>% left_join(consorcios_max, by="organisationID")
+
+#identificar los NAs y asignarles el role de patner
+
+test_org <- mutate_at(test_org, c("role"), ~replace(., is.na(.), "partner"))
+
+rm(consorcios_max)
+
+test_org <-rename(test_org, id=consortium)
+
+#Se guarda base test_org con la variable role
+
+saveRDS(test_org, './stores/test_org.rds')
 
 
+## 6.2.4. Tamaño del consorcio para test  ----
+
+tamano_consorc <- test_org %>% 
+  group_by(consortium) %>%
+  summarize(consorc_size = n())
+
+test <- tamano_consorc
+
+rm(tamano_consorc)
+
+## 6.2.5. Otras variables para test  ----
+
+set.seed(33)
+totalCost <- sample(3.938e+03:1.330e+09, nrow(test), replace=TRUE) 
+fS_type <- sample(1:15, nrow(test), replace=TRUE)        
+por_ecMaxContribution <- sample(0.8:1, nrow(test), replace=TRUE)   
+
+test <- test %>%
+  mutate(totalCost=totalCost)%>%
+  mutate(fS_type=fS_type)%>%
+  mutate(por_ecMaxContribution=por_ecMaxContribution)%>%
+  mutate(ecMaxContribution=por_ecMaxContribution*totalCost)
+
+test$por_ecMaxContribution <- NULL
+
+rm(totalCost, fS_type, por_ecMaxContribution)
+
+#identificar etiquetas
+#table(H2020_projects$fS_type)
+
+test$fS_type <- factor(test$fS_type, 
+                             labels = c("COFUND",
+                                        "COMPANY",
+                                        "CSA",
+                                        "EEN",
+                                        "ERC",
+                                        "ERC-ADG", 
+                                        "ERC-COG",
+                                        "ERC-STG",
+                                        "ERC-SYG",
+                                        "IA", 
+                                        "MSCA-ITN",
+                                        "MSCA_COFUND",
+                                        "MSCA_IF",
+                                        "MSCA_RISE",
+                                        "RIA"))
 
 
+test <-rename(test, id=consortium)
 
+#Se guarda base test_org con la variable role
 
-
-
+saveRDS(test, './stores/test.rds')
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 7. ESTADÍSTICAS DESCRIPTIVAS CON LA BASE COMPLETA ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+train <- readRDS("~/Desktop/BIG_DATA/MECA_BD_Final_project/stores/train.rds")
+
+
+install.packages("pacman")
+
+## llamar librerias de la sesion
+require(pacman)
+p_load(rio, # import/export data
+       tidyverse, # tidy-data
+       skimr, # summary data
+       caret) # Classification And REgression Training
 
 
 
+##Resumen de las variables
 
-# 
+skim(train$EC_cost_share)
+summary(EC_cost_share)
+
+skim(train$EC_cost_share)
+summary(EC_cost_share)
+
+skim(train$totalCost)
+summary(totalCost)
+
+skim(train$ecMaxContribution)
+summary(ecMaxContribution)
+
+skim(train$consorc_size)
+summary(consorc_size)
+
+
+skim(train$numPartnPRC)
+summary(numPartnPRC)
+
+skim(train$numPartnPRC)
+summary(consorc_size)
+
+
+##Otra manera con más información
+
+install.packages("psych") 
+require(psych) 
+
+
+describe(totalCost)
+describe(consorc_size)
+describe(numPartnPRC)
+describe(ecMaxContribution)
+describe(numPartnREC)
+describe(numPartnPRC)
+describe(numPartnHES)
+describe(NumPartners_EU13)
+describe(NumPartners_EU15)
+describe(NumPartners_NonEU)
+describe(acquaintance)
+describe(num_patentes)
+describe(share_unis)
+describe(share_resCen)
+describe(share_compan)
+describe(share_EU13)
+describe(share_EU15)
+describe(share_nonEU)
+describe(NPub_peerArticle)
+describe(NPub_ConfProceed)
+describe(NPub_Other)
+describe(`NPub_non-peerArticle`)
+describe(NPub_ThesisDiss)
+describe(NPub_Books)
+describe(NPub_BookChapt)
+describe(NPub_total)
+describe(NEntreg_Docs_reports)
+describe(NEntreg_Other)
+describe(NEntreg_OpenResData)
+describe(NEntreg_Websites_videos)
+describe(NEntreg_Demos_Prototyp)
+describe(NEntreg_total)
+describe(ln_totalCost)
+describe(ln_ecMaxContribution)
+describe(EC_cost_share)
+describe(coord_exper_FP7)
+describe(coord_ranking_p1)
+describe(particip_consorc_FP7)
+describe(coordin_consorc_FP7)
+
+##Histograma de algunas variables
+hist(NPub_total, main = "Número total de Publicaciones", ylab = "Publicaciones, col = "lightblue")
+
+hist(totalCost, main = "Costo Total", ylab = "", col = "lightblue")
+
+hist(consorc_size, main = "Tamaño del Consorcio", ylab = "", col = "lightblue")
+
+hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
+
+hist(numPartnPRC, main = "Número de socios asignados al sector privado ", ylab = "", col = "lightblue")
+
+hist(numPartnREC, main = "Número de socios asignados al sector de investigación", ylab = "", col = "lightblue")
+
+hist(numPartnHES, main = "numPartnHES", ylab = "", col = "lightblue")
+
+hist(NumPartners_EU13, main = "Número de socios de países de Europa Central y del Este", ylab = "", col = "lightblue")
+
+hist(NumPartners_EU15, main = "Número de socios de países del grupo EU15", ylab = "", col = "lightblue")
+
+hist(share_nonEU, main = "Porcentaje de países no eurpeos", ylab = "", col = "lightblue")
+
+hist(NPub_peerArticle, main = "Número de publicaciones por artículo", ylab = "", col = "lightblue")
+
+hist(NPub_ThesisDiss, main = "Número de publicaciones de tesis", ylab = "", col = "lightblue")
+
+hist(NPub_Books, main = "Número de publicaciones de libros", ylab = "", col = "lightblue")
+
+hist(NPub_BookChapt, main = "Número de publicaciones de capítulos de libros", ylab = "", col = "lightblue")
+
+hist(NPub_total, main = "Número total de publicaciones", ylab = "", col = "lightblue")
+
+hist(NEntreg_Docs_reports, main = "Número de entrega de documentos y reportes", ylab = "", col = "lightblue")
+
+hist(NEntreg_Other, main = "Número de entrega de otros", ylab = "", col = "lightblue")
+
+hist(NEntreg_OpenResData, main = "Número de entregables", ylab = "", col = "lightblue")
+
+hist(NEntreg_Websites_videos, main = "Número de entregas de sitios web y videos", ylab = "", col = "lightblue")
+
+hist(NEntreg_Demos_Prototyp, main = "Número de entregables: Demos y prototipos", ylab = "", col = "lightblue")
+
+hist(NEntreg_total, main = "Número de entregas totales", ylab = "", col = "lightblue")
+
+hist(ln_totalCost, main = "Logaritmo de costo total", ylab = "", col = "lightblue")
+
+hist(ln_ecMaxContribution, main = "Log de contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
+
+hist(EC_cost_share, main = "Proporción de la contribución ($) de la Comisión Europea sobre el presupuesto total del proyecto", ylab = "", col = "lightblue")
+
+hist(coord_exper_FP7, main = "Experiencia del coordinador en coordinación de proyectos del FP7", ylab = "", col = "lightblue")
+
+hist(coord_ranking_p1, main = "Posición del coordinador en el ranking GWTS Leiden 2022", ylab = "", col = "lightblue")
+
+hist(particip_consorc_FP7, main = "Experiencia del coordinador en coordinación de proyectos del FP7", ylab = "", col = "lightblue")
+
+hist(particip_consorc_FP7, main = "Experiencia de los miembros del consorcio de participación en proyectos del FP7", ylab = "", col = "lightblue")
+
+hist(coordin_consorc_FP7, main = "Experiencia de los miembros del consorcio de participación en proyectos del FP7
+     Experiencia de los miembros del consorcio de coordinación en proyectos del FP7", ylab = "", col = "lightblue")
+
+
+
 proyectos <- import("./stores/H2020_projects.rds")
 organizaciones <- import("./stores/H2020_organizations.rds")
-# 
-# 
-# 
-
-table(H2020_project$fS_type)
-
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

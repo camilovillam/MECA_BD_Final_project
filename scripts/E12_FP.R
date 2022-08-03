@@ -1795,7 +1795,7 @@ orgs <- H2020 %>%
   filter(country_cat != 'NonEU') %>%
   distinct(organisationID, name, activityType, country)
 
-# 6.1.1. Pruebas con sampling ----
+## 6.1.1. Pruebas con sampling ----
 
 # Grupos por país.
 orgs %>% group_by(country)
@@ -1811,7 +1811,7 @@ new_df <- orgs[, .SD[sample(x = .N, size = 5)], by=col1]
 library("plyr")
 new_df <- ddply(data_frame,.(country),function(x) x[sample(nrow(x),5),])
 
-# 6.1.2. For loop con memoria. ----
+## 6.1.2. For loop con memoria. ----
 new_df <- data.frame(matrix(ncol = 5, nrow = 0))
 colnames(new_df) <- c('organisationID', 'name', 'activityType', 'country', 'consortium')
 
@@ -1907,35 +1907,281 @@ end - start
 ## 6.2. Enriquecer la información de los consorcios (sección 3) ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+## 6.2.1. Se cargan las bases de interés ----
+
 consorcios_test <- import("./stores/consorcios_test.rds")
+H2020_organizations <- import("./stores/H2020_organizations.rds")
+H2020_projects <- import("./stores/H2020_projects.rds")
+train <- import("./stores/train.rds")
+
+compare_df_cols(H2020_organizations, train)
+
+## 6.2.2. Base organizaciones con info de base H2020 y variable consortium ----
+
+#Se deja consorcios_test con OrgnisationID y consortium
+consorcios_test$name<- NULL 
+consorcios_test$activityType<- NULL 
+consorcios_test$country<- NULL 
+
+#Se quitan las columnas con info de proyectos y dejan solo las columas con info de organizaciones
+colnames(H2020_organizations)
+
+# Columnas
+nonOrgCols <- c(
+'projectID',
+'projectAcronym',
+'SME',
+'contactForm',
+'contentUpdateDate',
+'order',
+'role',
+'ecContribution',
+'netEcContribution',
+'totalCost',
+'endOfParticipation',
+'active'
+)
+
+H2020org <-  H2020_organizations[, !names(H2020_organizations) %in% nonOrgCols] %>% distinct()
+
+#Se hacen join
+test_org <- consorcios_test %>% left_join(H2020org, by="organisationID")
+
+rm(nonOrgCols)
+
+## 6.2.3. Asignarle el rol a test org  ----
+
+#Se asigana el rol de coordinador al que tiene el max id del consorcio
+consorcios_max <- consorcios_test %>%
+  group_by(consortium) %>%
+  summarise(organisationID=max(organisationID)) %>%
+  mutate(role='coordinator')
+
+consorcios_max$consortium<- NULL 
+
+#Se hacen join
+test_org <- test_org %>% left_join(consorcios_max, by="organisationID")
+
+#identificar los NAs y asignarles el role de patner
+
+test_org <- mutate_at(test_org, c("role"), ~replace(., is.na(.), "partner"))
+
+rm(consorcios_max)
+
+test_org <-rename(test_org, id=consortium)
+
+#Se guarda base test_org con la variable role
+
+saveRDS(test_org, './stores/test_org.rds')
 
 
+## 6.2.4. Tamaño del consorcio para test  ----
+
+tamano_consorc <- test_org %>% 
+  group_by(consortium) %>%
+  summarize(consorc_size = n())
+
+test <- tamano_consorc
+
+rm(tamano_consorc)
+
+## 6.2.5. Otras variables para test  ----
+
+set.seed(33)
+totalCost <- sample(3.938e+03:1.330e+09, nrow(test), replace=TRUE) 
+fS_type <- sample(1:15, nrow(test), replace=TRUE)        
+por_ecMaxContribution <- sample(0.8:1, nrow(test), replace=TRUE)   
+
+test <- test %>%
+  mutate(totalCost=totalCost)%>%
+  mutate(fS_type=fS_type)%>%
+  mutate(por_ecMaxContribution=por_ecMaxContribution)%>%
+  mutate(ecMaxContribution=por_ecMaxContribution*totalCost)
+
+test$por_ecMaxContribution <- NULL
+
+rm(totalCost, fS_type, por_ecMaxContribution)
+
+#identificar etiquetas
+#table(H2020_projects$fS_type)
+
+test$fS_type <- factor(test$fS_type, 
+                             labels = c("COFUND",
+                                        "COMPANY",
+                                        "CSA",
+                                        "EEN",
+                                        "ERC",
+                                        "ERC-ADG", 
+                                        "ERC-COG",
+                                        "ERC-STG",
+                                        "ERC-SYG",
+                                        "IA", 
+                                        "MSCA-ITN",
+                                        "MSCA_COFUND",
+                                        "MSCA_IF",
+                                        "MSCA_RISE",
+                                        "RIA"))
 
 
+test <-rename(test, id=consortium)
 
+#Se guarda base test_org con la variable role
 
-
-
+saveRDS(test, './stores/test.rds')
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 7. ESTADÍSTICAS DESCRIPTIVAS CON LA BASE COMPLETA ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+train <- readRDS("~/Desktop/BIG_DATA/MECA_BD_Final_project/stores/train.rds")
+
+
+install.packages("pacman")
+
+## llamar librerias de la sesion
+require(pacman)
+p_load(rio, # import/export data
+       tidyverse, # tidy-data
+       skimr, # summary data
+       caret) # Classification And REgression Training
 
 
 
+##Resumen de las variables
+
+skim(train$EC_cost_share)
+summary(EC_cost_share)
+
+skim(train$EC_cost_share)
+summary(EC_cost_share)
+
+skim(train$totalCost)
+summary(totalCost)
+
+skim(train$ecMaxContribution)
+summary(ecMaxContribution)
+
+skim(train$consorc_size)
+summary(consorc_size)
+
+
+skim(train$numPartnPRC)
+summary(numPartnPRC)
+
+skim(train$numPartnPRC)
+summary(consorc_size)
+
+
+##Otra manera con más información
+
+install.packages("psych") 
+require(psych) 
+
+
+describe(totalCost)
+describe(consorc_size)
+describe(numPartnPRC)
+describe(ecMaxContribution)
+describe(numPartnREC)
+describe(numPartnPRC)
+describe(numPartnHES)
+describe(NumPartners_EU13)
+describe(NumPartners_EU15)
+describe(NumPartners_NonEU)
+describe(acquaintance)
+describe(num_patentes)
+describe(share_unis)
+describe(share_resCen)
+describe(share_compan)
+describe(share_EU13)
+describe(share_EU15)
+describe(share_nonEU)
+describe(NPub_peerArticle)
+describe(NPub_ConfProceed)
+describe(NPub_Other)
+describe(`NPub_non-peerArticle`)
+describe(NPub_ThesisDiss)
+describe(NPub_Books)
+describe(NPub_BookChapt)
+describe(NPub_total)
+describe(NEntreg_Docs_reports)
+describe(NEntreg_Other)
+describe(NEntreg_OpenResData)
+describe(NEntreg_Websites_videos)
+describe(NEntreg_Demos_Prototyp)
+describe(NEntreg_total)
+describe(ln_totalCost)
+describe(ln_ecMaxContribution)
+describe(EC_cost_share)
+describe(coord_exper_FP7)
+describe(coord_ranking_p1)
+describe(particip_consorc_FP7)
+describe(coordin_consorc_FP7)
+
+##Histograma de algunas variables
+hist(NPub_total, main = "Número total de Publicaciones", ylab = "Publicaciones, col = "lightblue")
+
+hist(totalCost, main = "Costo Total", ylab = "", col = "lightblue")
+
+hist(consorc_size, main = "Tamaño del Consorcio", ylab = "", col = "lightblue")
+
+hist(ecMaxContribution, main = "contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
+
+hist(numPartnPRC, main = "Número de socios asignados al sector privado ", ylab = "", col = "lightblue")
+
+hist(numPartnREC, main = "Número de socios asignados al sector de investigación", ylab = "", col = "lightblue")
+
+hist(numPartnHES, main = "numPartnHES", ylab = "", col = "lightblue")
+
+hist(NumPartners_EU13, main = "Número de socios de países de Europa Central y del Este", ylab = "", col = "lightblue")
+
+hist(NumPartners_EU15, main = "Número de socios de países del grupo EU15", ylab = "", col = "lightblue")
+
+hist(share_nonEU, main = "Porcentaje de países no eurpeos", ylab = "", col = "lightblue")
+
+hist(NPub_peerArticle, main = "Número de publicaciones por artículo", ylab = "", col = "lightblue")
+
+hist(NPub_ThesisDiss, main = "Número de publicaciones de tesis", ylab = "", col = "lightblue")
+
+hist(NPub_Books, main = "Número de publicaciones de libros", ylab = "", col = "lightblue")
+
+hist(NPub_BookChapt, main = "Número de publicaciones de capítulos de libros", ylab = "", col = "lightblue")
+
+hist(NPub_total, main = "Número total de publicaciones", ylab = "", col = "lightblue")
+
+hist(NEntreg_Docs_reports, main = "Número de entrega de documentos y reportes", ylab = "", col = "lightblue")
+
+hist(NEntreg_Other, main = "Número de entrega de otros", ylab = "", col = "lightblue")
+
+hist(NEntreg_OpenResData, main = "Número de entregables", ylab = "", col = "lightblue")
+
+hist(NEntreg_Websites_videos, main = "Número de entregas de sitios web y videos", ylab = "", col = "lightblue")
+
+hist(NEntreg_Demos_Prototyp, main = "Número de entregables: Demos y prototipos", ylab = "", col = "lightblue")
+
+hist(NEntreg_total, main = "Número de entregas totales", ylab = "", col = "lightblue")
+
+hist(ln_totalCost, main = "Logaritmo de costo total", ylab = "", col = "lightblue")
+
+hist(ln_ecMaxContribution, main = "Log de contribución ($) de la Comisión Europea", ylab = "", col = "lightblue")
+
+hist(EC_cost_share, main = "Proporción de la contribución ($) de la Comisión Europea sobre el presupuesto total del proyecto", ylab = "", col = "lightblue")
+
+hist(coord_exper_FP7, main = "Experiencia del coordinador en coordinación de proyectos del FP7", ylab = "", col = "lightblue")
+
+hist(coord_ranking_p1, main = "Posición del coordinador en el ranking GWTS Leiden 2022", ylab = "", col = "lightblue")
+
+hist(particip_consorc_FP7, main = "Experiencia del coordinador en coordinación de proyectos del FP7", ylab = "", col = "lightblue")
+
+hist(particip_consorc_FP7, main = "Experiencia de los miembros del consorcio de participación en proyectos del FP7", ylab = "", col = "lightblue")
+
+hist(coordin_consorc_FP7, main = "Experiencia de los miembros del consorcio de participación en proyectos del FP7
+     Experiencia de los miembros del consorcio de coordinación en proyectos del FP7", ylab = "", col = "lightblue")
 
 
 
-# 
 proyectos <- import("./stores/H2020_projects.rds")
 organizaciones <- import("./stores/H2020_organizations.rds")
-# 
-# 
-# 
-
-
-
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1949,15 +2195,21 @@ organizaciones <- import("./stores/H2020_organizations.rds")
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #train <- H2020_project
-train <- proyectos
+
+setwd("~/GitHub/MECA_BD_Final_project/")
+train <- import("./stores/H2020_projects.rds")
+test <- import("./stores/Test_base/H2020_projects_test.rds")
  
 colnames(train)
+colnames(test)
 
 train[ , c("legalBasis","ecSignatureDate","nature","objective",
                     "contentUpdateDate","rcn","grantDoi","masterCall","subCall",
                     "topics")] <- list(NULL)
 
-export(train,"./stores/train.rds")
+#export(train,"./stores/train.rds")
+#export(test,"./stores/test.rds")
+
 
 # Análisis preliminar: ¿correlación entre nuestro índice y el puntaje de expertos?
 cor(train$indice_integrado_s,train$expert_score_hat)
@@ -2097,33 +2349,1067 @@ reg_indice_integrado <- lm(form_indice_integrado,data=Tr_train)
 stargazer(reg_indice_integrado,type="text")
 
 
+mean(reg_articl$residuals^2)
+mean(reg_ECcontrib$residuals^2)
+mean(reg_entreg$residuals^2)
+mean(reg_indice$residuals^2) 
+mean(reg_indice_integrado$residuals^2) 
+mean(reg_lnECcontrib$residuals^2)
+mean(reg_lntotalcost$residuals^2) 
+mean(reg_otras_pubs$residuals^2)  
+mean(reg_patentes$residuals^2)
+mean(reg_tot_publs$residuals^2)
+mean(reg_totalcost$residuals^2)
+
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 9. CÁLCULO ÍNDICE AGREGADO ----
+## 8.7 Modelos random forest para todas las variables Y ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+regresores_rf <- "~ consorc_size + consorcUnit + fS_type +
+                          share_unis + share_resCen + 
+                          share_EU13 + share_EU15 + share_nonEU + 
+                          acquaintance + log_eigenvector + 
+                          coord_exper_FP7 + coord_country_cat + 
+                          coord_ranking_p1 + coord_top50_rank + 
+                          coord_top50_EU + coord_evid_patentes + 
+                          ranking_top50_consorc + rank_EU_top50_consorc +
+                          evid_patent_consorc"
+
+
+form_rf_lntotalcost <- as.formula(paste0("ln_totalCost",regresores_rf))
+form_rf_totalcost <-  as.formula(paste0("totalCost",regresores_rf))
+form_rf_lnECcontrib <- as.formula(paste0("ln_ecMaxContribution",regresores_rf))
+form_rf_ECcontrib <-  as.formula(paste0("ecMaxContribution",regresores_rf))
+form_rf_patentes <- as.formula(paste0("num_patentes",regresores_rf))
+form_rf_articl <- as.formula(paste0("NPub_peerArticle",regresores_rf))
+form_rf_tot_publs <- as.formula(paste0("NPub_total",regresores_rf))
+form_rf_otras_pubs <- as.formula(paste0("NPub_resto",regresores_rf))
+form_rf_entreg <- as.formula(paste0("NEntreg_total",regresores_rf))
+#form_rf_indice_integrado <- as.formula(paste0("indice_integrado_s",regresores_rf))
+
+
+Tr_train_forest <- Tr_train
+
+colSums(is.na(Tr_train_forest))
+
+Tr_train_forest$startDate <- NULL
+Tr_train_forest$endDate <- NULL 
+
+Tr_train_forest <- Tr_train_forest[complete.cases(Tr_train_forest), ] #No admite NAs
+nrow(Tr_train_forest)
+
+set.seed(100)
+
+control_rf <- trainControl(method='cv', 
+                           number=5,
+                           verbose=FALSE,
+                           savePredictions = T)
+
+mtry <- sqrt(19) #Número de predictores
+
+tunegrid_rf <- expand.grid(.mtry=mtry)
+
+#Se prepara PC para procesamiento paralelo:
+n_cores <- detectCores()
+n_cores
+cl <- makePSOCKcluster(n_cores-4) 
+registerDoParallel(cl)
+
+
+start <- Sys.time()
+
+#1
+forest_lntotalcost <- train(form_rf_lntotalcost, 
+                data=Tr_train_forest, 
+                method='rf',
+                trControl = control_rf,
+                na.action  = na.pass,
+                tuneGrid=tunegrid_rf)
+
+export(forest_lntotalcost,"./stores/modelos_entrenados/forest_lntotalcost.rds")
+print(Sys.time())
+
+#2
+forest_totalcost <- train(form_rf_totalcost, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+export(forest_totalcost,"./stores/modelos_entrenados/forest_totalcost.rds")
+print(Sys.time())
+
+#3
+forest_lnECcontrib <- train(form_rf_lnECcontrib, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+export(forest_lnECcontrib,"./stores/modelos_entrenados/forest_lnECcontrib.rds")
+print(Sys.time())
+
+#4
+forest_ECcontrib <- train(form_rf_ECcontrib, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+export(forest_ECcontrib,"./stores/modelos_entrenados/forest_ECcontrib.rds")
+print(Sys.time())
+
+#5
+forest_patentes <- train(form_rf_patentes, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+export(forest_patentes,"./stores/modelos_entrenados/forest_patentes.rds")
+print(Sys.time())
+
+#6
+forest_articl <- train(form_rf_articl, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+
+export(forest_articl,"./stores/modelos_entrenados/forest_articl.rds")
+print(Sys.time())
+
+#7
+forest_tot_publs <- train(form_rf_tot_publs, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+
+export(forest_tot_publs,"./stores/modelos_entrenados/forest_tot_publs.rds")
+print(Sys.time())
+
+#8
+forest_otras_pubs <- train(form_rf_otras_pubs, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+
+export(forest_otras_pubs,"./stores/modelos_entrenados/forest_otras_pubs.rds")
+print(Sys.time())
+
+#9
+forest_entreg <- train(form_rf_entreg, 
+                            data=Tr_train_forest, 
+                            method='rf',
+                            trControl = control_rf,
+                            na.action  = na.pass,
+                            tuneGrid=tunegrid_rf)
+
+
+export(forest_entreg,"./stores/modelos_entrenados/forest_entreg.rds")
+print(Sys.time())
+
+# #10
+# forest_indice_integrado <- train(form_rf_indice_integrado, 
+#                             data=Tr_train_forest, 
+#                             method='rf',
+#                             trControl = control_rf,
+#                             na.action  = na.pass,
+#                             tuneGrid=tunegrid_rf)
+# 
+# 
+# export(forest_indice_integrado,"./stores/modelos_entrenados/forest_indice_integrado.rds")
+
+end <- Sys.time()
+end - start
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 8.8 Modelos OLS con CV para todas las variables Y ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+regresores <- "~ consorc_size + consorcUnit + fS_type +
+                          share_unis + share_resCen + 
+                          share_EU13 + share_EU15 + share_nonEU + 
+                          acquaintance + log_eigenvector + 
+                          coord_exper_FP7 + coord_country_cat + 
+                          coord_ranking_p1 + coord_top50_rank + 
+                          coord_top50_EU + coord_evid_patentes + 
+                          ranking_top50_consorc + rank_EU_top50_consorc +
+                          evid_patent_consorc"
+
+
+form_ln_totalCost <- as.formula(paste0("ln_totalCost",regresores))
+form_totalCost <-  as.formula(paste0("totalCost",regresores))
+form_ln_ecMaxContribution <- as.formula(paste0("ln_ecMaxContribution",regresores))
+form_ecMaxContribution <-  as.formula(paste0("ecMaxContribution",regresores))
+form_num_patentes <- as.formula(paste0("num_patentes",regresores))
+form_NPub_peerArticle <- as.formula(paste0("NPub_peerArticle",regresores))
+form_NPub_total <- as.formula(paste0("NPub_total",regresores))
+form_NPub_resto <- as.formula(paste0("NPub_resto",regresores))
+form_NEntreg_total <- as.formula(paste0("NEntreg_total",regresores))
+
+
+OLS_ln_totalCost <- train(form_ln_totalCost,
+                          data = Tr_train,
+                          trControl=trainControl(method="cv",number=5),
+                          na.action  = na.pass,
+                          method="lm")
+
+export(OLS_ln_totalCost,"./stores/modelos_entrenados/OLS_ln_totalCost.rds")
+
+OLS_totalCost <- train(form_totalCost,
+                       data = Tr_train,
+                       trControl=trainControl(method="cv",number=5),
+                       na.action  = na.pass,
+                       method="lm")
+
+export(OLS_totalCost,"./stores/modelos_entrenados/OLS_totalCost.rds")
+
+OLS_ln_ecMaxContribution <- train(form_ln_ecMaxContribution,
+                                  data = Tr_train,
+                                  trControl=trainControl(method="cv",number=5),
+                                  na.action  = na.pass,
+                                  method="lm")
+
+export(OLS_ln_ecMaxContribution,"./stores/modelos_entrenados/OLS_ln_ecMaxContribution.rds")
+
+OLS_ecMaxContribution <- train(form_ecMaxContribution,
+                               data = Tr_train,
+                               trControl=trainControl(method="cv",number=5),
+                               na.action  = na.pass,
+                               method="lm")
+
+export(OLS_ecMaxContribution,"./stores/modelos_entrenados/OLS_ecMaxContribution.rds")
+
+OLS_num_patentes <- train(form_num_patentes,
+                          data = Tr_train,
+                          trControl=trainControl(method="cv",number=5),
+                          na.action  = na.pass,
+                          method="lm")
+
+export(OLS_num_patentes,"./stores/modelos_entrenados/OLS_num_patentes.rds")
+
+OLS_NPub_peerArticle <- train(form_NPub_peerArticle,
+                              data = Tr_train,
+                              trControl=trainControl(method="cv",number=5),
+                              na.action  = na.pass,
+                              method="lm")
+
+export(OLS_NPub_peerArticle,"./stores/modelos_entrenados/OLS_NPub_peerArticle.rds")
+
+OLS_NPub_total <- train(form_NPub_total,
+                        data = Tr_train,
+                        trControl=trainControl(method="cv",number=5),
+                        na.action  = na.pass,
+                        method="lm")
+
+export(OLS_NPub_total,"./stores/modelos_entrenados/OLS_NPub_total.rds")
+
+OLS_NPub_resto <- train(form_NPub_resto,
+                        data = Tr_train,
+                        trControl=trainControl(method="cv",number=5),
+                        na.action  = na.pass,
+                        method="lm")
+
+export(OLS_NPub_resto,"./stores/modelos_entrenados/OLS_NPub_resto.rds")
+
+OLS_NEntreg_total <- train(form_NEntreg_total,
+                           data = Tr_train,
+                           trControl=trainControl(method="cv",number=5),
+                           na.action  = na.pass,
+                           method="lm")
+
+export(OLS_NEntreg_total,"./stores/modelos_entrenados/OLS_NEntreg_total.rds")
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 8.9 Modelos lasso con CV para todas las variables Y ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+control <- trainControl(method = "cv", number = 5,
+                        #summaryFunction = fiveStats, 
+                        #classProbs = TRUE,
+                        verbose=FALSE,
+                        savePredictions = T)
+
+
+lambda <- 10^seq(-2, 3, length = 200)
+
+
+lasso_ln_totalCost <- train(form_ln_totalCost,
+                            data = Tr_train,
+                            method = "glmnet",
+                            trControl = trainControl("cv", number = 5),
+                            na.action  = na.pass,
+                            tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                            preProcess = c("center", "scale"))
+
+export(lasso_ln_totalCost,"./stores/modelos_entrenados/lasso_ln_totalCost.rds")
+
+
+lasso_totalCost <- train(form_totalCost,
+                         data = Tr_train,
+                         method = "glmnet",
+                         trControl = trainControl("cv", number = 5),
+                         na.action  = na.pass,
+                         tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                         preProcess = c("center", "scale"))
+
+export(lasso_totalCost,"./stores/modelos_entrenados/lasso_totalCost.rds")
+
+
+lasso_ln_ecMaxContribution <- train(form_ln_ecMaxContribution,
+                                    data = Tr_train,
+                                    method = "glmnet",
+                                    trControl = trainControl("cv", number = 5),
+                                    na.action  = na.pass,
+                                    tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                                    preProcess = c("center", "scale"))
+
+export(lasso_ln_ecMaxContribution,"./stores/modelos_entrenados/lasso_ln_ecMaxContribution.rds")
+
+
+lasso_ecMaxContribution <- train(form_ecMaxContribution,
+                                 data = Tr_train,
+                                 method = "glmnet",
+                                 trControl = trainControl("cv", number = 5),
+                                 na.action  = na.pass,
+                                 tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                                 preProcess = c("center", "scale"))
+
+export(lasso_ecMaxContribution,"./stores/modelos_entrenados/lasso_ecMaxContribution.rds")
+
+
+lasso_num_patentes <- train(form_num_patentes,
+                            data = Tr_train,
+                            method = "glmnet",
+                            trControl = trainControl("cv", number = 5),
+                            na.action  = na.pass,
+                            tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                            preProcess = c("center", "scale"))
+
+export(lasso_num_patentes,"./stores/modelos_entrenados/lasso_num_patentes.rds")
+
+
+lasso_NPub_peerArticle <- train(form_NPub_peerArticle,
+                                data = Tr_train,
+                                method = "glmnet",
+                                trControl = trainControl("cv", number = 5),
+                                na.action  = na.pass,
+                                tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                                preProcess = c("center", "scale"))
+
+export(lasso_NPub_peerArticle,"./stores/modelos_entrenados/lasso_NPub_peerArticle.rds")
+
+
+lasso_NPub_total <- train(form_NPub_total,
+                          data = Tr_train,
+                          method = "glmnet",
+                          trControl = trainControl("cv", number = 5),
+                          na.action  = na.pass,
+                          tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                          preProcess = c("center", "scale"))
+
+export(lasso_NPub_total,"./stores/modelos_entrenados/lasso_NPub_total.rds")
+
+
+lasso_NPub_resto <- train(form_NPub_resto,
+                          data = Tr_train,
+                          method = "glmnet",
+                          trControl = trainControl("cv", number = 5),
+                          na.action  = na.pass,
+                          tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                          preProcess = c("center", "scale"))
+
+export(lasso_NPub_resto,"./stores/modelos_entrenados/lasso_NPub_resto.rds")
+
+
+lasso_NEntreg_total <- train(form_NEntreg_total,
+                             data = Tr_train,
+                             method = "glmnet",
+                             trControl = trainControl("cv", number = 5),
+                             na.action  = na.pass,
+                             tuneGrid = expand.grid(alpha = 1,lambda=lambda),
+                             preProcess = c("center", "scale"))
+
+export(lasso_NEntreg_total,"./stores/modelos_entrenados/lasso_NEntreg_total.rds")
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 8.10 Modelos ridge con CV para todas las variables Y ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
+ridge_ln_totalCost <- train(form_ln_totalCost,
+                            data = Tr_train,
+                            method = "glmnet",
+                            trControl = trainControl("cv", number = 5),
+                            na.action  = na.pass,
+                            tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                            preProcess = c("center", "scale"))
+
+export(ridge_ln_totalCost,"./stores/modelos_entrenados/ridge_ln_totalCost.rds")
+
+
+ridge_totalCost <- train(form_totalCost,
+                         data = Tr_train,
+                         method = "glmnet",
+                         trControl = trainControl("cv", number = 5),
+                         na.action  = na.pass,
+                         tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                         preProcess = c("center", "scale"))
+
+export(ridge_totalCost,"./stores/modelos_entrenados/ridge_totalCost.rds")
+
+
+ridge_ln_ecMaxContribution <- train(form_ln_ecMaxContribution,
+                                    data = Tr_train,
+                                    method = "glmnet",
+                                    trControl = trainControl("cv", number = 5),
+                                    na.action  = na.pass,
+                                    tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                                    preProcess = c("center", "scale"))
+
+export(ridge_ln_ecMaxContribution,"./stores/modelos_entrenados/ridge_ln_ecMaxContribution.rds")
+
+
+ridge_ecMaxContribution <- train(form_ecMaxContribution,
+                                 data = Tr_train,
+                                 method = "glmnet",
+                                 trControl = trainControl("cv", number = 5),
+                                 na.action  = na.pass,
+                                 tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                                 preProcess = c("center", "scale"))
+
+export(ridge_ecMaxContribution,"./stores/modelos_entrenados/ridge_ecMaxContribution.rds")
+
+
+ridge_num_patentes <- train(form_num_patentes,
+                            data = Tr_train,
+                            method = "glmnet",
+                            trControl = trainControl("cv", number = 5),
+                            na.action  = na.pass,
+                            tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                            preProcess = c("center", "scale"))
+
+export(ridge_num_patentes,"./stores/modelos_entrenados/ridge_num_patentes.rds")
+
+
+ridge_NPub_peerArticle <- train(form_NPub_peerArticle,
+                                data = Tr_train,
+                                method = "glmnet",
+                                trControl = trainControl("cv", number = 5),
+                                na.action  = na.pass,
+                                tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                                preProcess = c("center", "scale"))
+
+export(ridge_NPub_peerArticle,"./stores/modelos_entrenados/ridge_NPub_peerArticle.rds")
+
+
+ridge_NPub_total <- train(form_NPub_total,
+                          data = Tr_train,
+                          method = "glmnet",
+                          trControl = trainControl("cv", number = 5),
+                          na.action  = na.pass,
+                          tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                          preProcess = c("center", "scale"))
+
+export(ridge_NPub_total,"./stores/modelos_entrenados/ridge_NPub_total.rds")
+
+
+ridge_NPub_resto <- train(form_NPub_resto,
+                          data = Tr_train,
+                          method = "glmnet",
+                          trControl = trainControl("cv", number = 5),
+                          na.action  = na.pass,
+                          tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                          preProcess = c("center", "scale"))
+
+export(ridge_NPub_resto,"./stores/modelos_entrenados/ridge_NPub_resto.rds")
+
+
+ridge_NEntreg_total <- train(form_NEntreg_total,
+                             data = Tr_train,
+                             method = "glmnet",
+                             trControl = trainControl("cv", number = 5),
+                             na.action  = na.pass,
+                             tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                             preProcess = c("center", "scale"))
+
+export(ridge_NEntreg_total,"./stores/modelos_entrenados/ridge_NEntreg_total.rds")
+
+ridge1 <- train(form_OLS2,
+                data = Tr_train,
+                method = "glmnet",
+                trControl = trainControl("cv", number = 5),
+                na.action  = na.pass,
+                tuneGrid = expand.grid(alpha = 0,lambda=lambda),
+                preProcess = c("center", "scale"))
 
 
 
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 8.11 Modelos Elastic net con CV para todas las variables Y ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+
+elnet_ln_totalCost <- train(form_ln_totalCost,
+                            data = Tr_train,
+                            method = "glmnet",
+                            trControl = trainControl("cv", number = 5),
+                            na.action  = na.pass,
+                            preProcess = c("center", "scale"))
+
+export(elnet_ln_totalCost,"./stores/modelos_entrenados/elnet_ln_totalCost.rds")
+
+
+elnet_totalCost <- train(form_totalCost,
+                         data = Tr_train,
+                         method = "glmnet",
+                         trControl = trainControl("cv", number = 5),
+                         na.action  = na.pass,
+                         preProcess = c("center", "scale"))
+
+export(elnet_totalCost,"./stores/modelos_entrenados/elnet_totalCost.rds")
+
+
+elnet_ln_ecMaxContribution <- train(form_ln_ecMaxContribution,
+                                    data = Tr_train,
+                                    method = "glmnet",
+                                    trControl = trainControl("cv", number = 5),
+                                    na.action  = na.pass,
+                                    preProcess = c("center", "scale"))
+
+export(elnet_ln_ecMaxContribution,"./stores/modelos_entrenados/elnet_ln_ecMaxContribution.rds")
+
+
+elnet_ecMaxContribution <- train(form_ecMaxContribution,
+                                 data = Tr_train,
+                                 method = "glmnet",
+                                 trControl = trainControl("cv", number = 5),
+                                 na.action  = na.pass,
+                                 preProcess = c("center", "scale"))
+
+export(elnet_ecMaxContribution,"./stores/modelos_entrenados/elnet_ecMaxContribution.rds")
+
+
+elnet_num_patentes <- train(form_num_patentes,
+                            data = Tr_train,
+                            method = "glmnet",
+                            trControl = trainControl("cv", number = 5),
+                            na.action  = na.pass,
+                            preProcess = c("center", "scale"))
+
+export(elnet_num_patentes,"./stores/modelos_entrenados/elnet_num_patentes.rds")
+
+
+elnet_NPub_peerArticle <- train(form_NPub_peerArticle,
+                                data = Tr_train,
+                                method = "glmnet",
+                                trControl = trainControl("cv", number = 5),
+                                na.action  = na.pass,
+                                preProcess = c("center", "scale"))
+
+export(elnet_NPub_peerArticle,"./stores/modelos_entrenados/elnet_NPub_peerArticle.rds")
+
+
+elnet_NPub_total <- train(form_NPub_total,
+                          data = Tr_train,
+                          method = "glmnet",
+                          trControl = trainControl("cv", number = 5),
+                          na.action  = na.pass,
+                          preProcess = c("center", "scale"))
+
+export(elnet_NPub_total,"./stores/modelos_entrenados/elnet_NPub_total.rds")
+
+
+elnet_NPub_resto <- train(form_NPub_resto,
+                          data = Tr_train,
+                          method = "glmnet",
+                          trControl = trainControl("cv", number = 5),
+                          na.action  = na.pass,
+                          preProcess = c("center", "scale"))
+
+export(elnet_NPub_resto,"./stores/modelos_entrenados/elnet_NPub_resto.rds")
+
+
+elnet_NEntreg_total <- train(form_NEntreg_total,
+                             data = Tr_train,
+                             method = "glmnet",
+                             trControl = trainControl("cv", number = 5),
+                             na.action  = na.pass,
+                             preProcess = c("center", "scale"))
+
+export(elnet_NEntreg_total,"./stores/modelos_entrenados/elnet_NEntreg_total.rds")
+
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# 9. PREDICCIONES EN TR_TEST ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+#En este caso tenemos varias variables Y:
+
+#Hay que guardar los archivos en orden según estas variables:
+
+# lntotalcost
+# totalcost
+# lnECcontrib
+# ECcontrib
+# patentes
+# articl
+# tot_publs
+# otras_pubs
+# entreg
+
+
+
+#Código para estimación
+
+
+#Inicialización de listas / matrices:
+
+#resumen_modelos
+modelos_pred <- list()   #Modelos entrenados
+pred_modelo <- list()    #Predicciones sobre Tr_test
+
+#Se leen los archivos del directorio
+archivos_modelos <- c(list.files("./stores/modelos_entrenados",include.dirs=TRUE))
+
+
+#Hago las predicciones y las guardo en una lista:
+
+for (i in 1:length(archivos_modelos)){
+  
+  #Se carga el modelo:
+  modelos_pred[[i]] <- readRDS(paste0("./stores/modelos_entrenados/",archivos_modelos[i]))
+  
+  #Se hace la predicción
+  pred_modelo[[i]] <- predict(modelos_pred[[i]],Tr_test)
+  
+  #Se nombra el elemento de la lista
+  names(pred_modelo)[i] <- str_remove(archivos_modelos[i], ".rds")
+  
+  #Unión de columnas: predicción con información básica
+  pred_modelo[[i]] <- cbind(Tr_test[,c("id","acronym")],
+                            pred_modelo[[i]])
+  
+  colnames(pred_modelo[[i]]) <- c("id","acronym","prediction")
+  
+}
+
+#Luego puedo unir la lista en una única matriz para traer los valores reales y calcular el error:
+
+predicciones_tr_test <- bind_rows(pred_modelo, .id = "modelo_var")
+
+
+pred_tr_test_modelo <- str_split_fixed(predicciones_tr_test$modelo_var,"_",n=2)
+pred_tr_test_modelo <- data.frame(pred_tr_test_modelo)
+colnames(pred_tr_test_modelo) <- c("modelo","variable_y")
+
+predicciones_tr_test <- cbind(predicciones_tr_test,pred_tr_test_modelo)
+
+
+#Debo traer los datos reales de Tr_test:
+                                  
+valores_reales_tr_test <- Tr_test[,c(
+  "id",
+  "ln_totalCost",
+  "totalCost",
+  "ln_ecMaxContribution",
+  "ecMaxContribution",
+  "num_patentes",
+  "NPub_peerArticle",
+  "NPub_total",
+  "NPub_resto",
+  "NEntreg_total")]
+
+
+#Convertimos esta matriz en formato largo
+valores_reales_tr_test <- valores_reales_tr_test %>% 
+  pivot_longer(!id, names_to="variable_y", values_to = "valor_real")
+
+
+colnames(predicciones_tr_test)
+colnames(valores_reales_tr_test)
+
+#Hago join entre las dos bases:
+
+nrow(predicciones_tr_test)
+predicciones_tr_test <- left_join(predicciones_tr_test,valores_reales_tr_test,
+                                  by=c("id", "variable_y"))
+
+colnames(predicciones_tr_test)
+colSums(is.na(predicciones_tr_test))
+
+
+predicciones_tr_test$squared_error <- (predicciones_tr_test$valor_real - 
+                                         predicciones_tr_test$prediction)^2
+ 
+
+resumen_modelos_MSE <-  predicciones_tr_test %>% 
+  group_by(variable_y,modelo) %>% 
+  summarize(MSE = mean(squared_error))
+
+export(resumen_modelos_MSE,"./views/Resumen modelos MSE.xlsx")
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 10. CLASIFICACIÓN ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 10.1. Predicción de los mejores modelos para cada variable ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#De acuerdo con la tabla comparativa anterior, los mejores modelos para cada
+# variable son:
+  
+mejores_modelos <- c("forest_ecMaxContribution",
+                     "forest_ln_ecMaxContribution",
+                     "forest_ln_totalCost",
+                     "forest_NEntreg_total",
+                     "ridge_NPub_peerArticle",
+                     "OLS_NPub_resto",
+                     "ridge_NPub_total",
+                     "lasso_num_patentes",
+                     "forest_totalCost")
+
+#Se extraen de la tabla completa las mejores predicciones:
+
+mejores_predicciones <- predicciones_tr_test
+
+nrow(mejores_predicciones)
+mejores_predicciones <- mejores_predicciones[mejores_predicciones$modelo_var 
+                                             %in%mejores_modelos,]
+
+table(mejores_predicciones$variable_y,mejores_predicciones$modelo)
+
+colnames(mejores_predicciones)
+mejores_predicciones[,c("modelo_var","acronym",
+                        "modelo","valor_real","squared_error")] <- list(NULL)
+
+mejores_predicciones <- pivot_wider(mejores_predicciones,
+                                    names_from=variable_y,
+                                    values_from=prediction)
+
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 10.2. Cálculo del índice integrado de cada proyecto ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+summary(mejores_predicciones$num_patentes)
+hist(mejores_predicciones$num_patentes)
+
+summary(mejores_predicciones$NPub_peerArticle)
+hist(mejores_predicciones$NPub_peerArticle)
+
+summary(mejores_predicciones$NPub_resto)
+hist(mejores_predicciones$NPub_resto)
+
+summary(mejores_predicciones$NEntreg_total)
+hist(mejores_predicciones$NEntreg_total)
+
+summary(mejores_predicciones$ln_ecMaxContribution)
+hist(mejores_predicciones$ln_ecMaxContribution)
+
+summary(mejores_predicciones$ecMaxContribution)
+hist(mejores_predicciones$ecMaxContribution)
+
+summary(mejores_predicciones$ln_totalCost)
+hist(mejores_predicciones$ln_totalCost)
+
+summary(mejores_predicciones$totalCost)
+hist(mejores_predicciones$totalCost)
+
+#Se escalan las variables para el índice:
+
+#mejores_predicciones$num_patentes_s <- scale(mejores_predicciones$num_patentes,center = TRUE, scale = TRUE)
+mejores_predicciones$num_patentes_s <- 0
+mejores_predicciones$NPub_peerArticle_s <- scale(mejores_predicciones$NPub_peerArticle  ,center = TRUE, scale = TRUE)
+mejores_predicciones$NPub_resto_s <- scale(mejores_predicciones$NPub_resto ,center = TRUE, scale = TRUE)
+mejores_predicciones$NEntreg_total_s <- scale(mejores_predicciones$NEntreg_total ,center = TRUE, scale = TRUE)
+mejores_predicciones$ecMaxContribution_s <- scale(mejores_predicciones$ecMaxContribution ,center = TRUE, scale = TRUE)
+mejores_predicciones$totalCost_s <- scale(mejores_predicciones$totalCost ,center = TRUE, scale = TRUE)
+
+
+#Explorar las variables escaladas que conforman el índice:
+
+summary(mejores_predicciones$num_patentes_s)
+hist(mejores_predicciones$num_patentes_s)
+
+summary(mejores_predicciones$NPub_peerArticle_s)
+hist(mejores_predicciones$NPub_peerArticle_s)
+
+summary(mejores_predicciones$NPub_resto_s)
+hist(mejores_predicciones$NPub_resto_s)
+
+summary(mejores_predicciones$NEntreg_total_s)
+hist(mejores_predicciones$NEntreg_total_s)
+
+summary(mejores_predicciones$ecMaxContribution_s)
+hist(mejores_predicciones$ecMaxContribution_s)
+
+summary(mejores_predicciones$totalCost_s)
+hist(mejores_predicciones$totalCost_s)
+
+
+#Se calcula el índice:
+
+mejores_predicciones$indice_integrado_s <- 
+  log(mejores_predicciones$num_patentes_s * 10 + 
+        mejores_predicciones$NPub_peerArticle_s * 60 +
+        mejores_predicciones$NPub_resto_s * 10 +
+        mejores_predicciones$NEntreg_total_s*20 + 
+        100)
+
+summary(mejores_predicciones$indice_integrado_s)
+hist(mejores_predicciones$indice_integrado_s)
+boxplot(mejores_predicciones$indice_integrado_s)
+
+ggplot(mejores_predicciones, aes(x="", y=indice_integrado_s)) + 
+  geom_boxplot(fill="slateblue", alpha=0.2) + 
+  xlab("Índice de impacto predicho de los consorcios")
 
 
 
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+## 10.3. Regla de clasificación: financiable / no financiable ----
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+mejores_predicciones$financiado <- if_else(
+  mejores_predicciones$indice_integrado_s>=3.8,TRUE,FALSE)
 
 
+decision_tr_test <- table(mejores_predicciones$financiado)
+export(decision_tr_test,"./views/Clasificación Final Tr_test.xlsx")
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # 11. PREDICCIÓN FINAL CON BASE DE TEST ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+test <- import("./stores/Test_base/H2020_projects_test.rds")
+
+colnames(test)
+
+#Inicialización de listas / matrices:
+
+#resumen_modelos
+modelos_pred <- list()   #Modelos entrenados
+pred_modelo <- list()    #Predicciones sobre Tr_test
+
+#Se leen los archivos del directorio
+archivos_modelos <- c(list.files("./stores/modelos_entrenados",include.dirs=TRUE))
+
+
+#Hago las predicciones y las guardo en una lista:
+
+for (i in 1:length(archivos_modelos)){
+  
+  #Se carga el modelo:
+  modelos_pred[[i]] <- readRDS(paste0("./stores/modelos_entrenados/",archivos_modelos[i]))
+  
+  #Se hace la predicción
+  pred_modelo[[i]] <- predict(modelos_pred[[i]],test)
+  
+  #Se nombra el elemento de la lista
+  names(pred_modelo)[i] <- str_remove(archivos_modelos[i], ".rds")
+  
+  #Unión de columnas: predicción con información básica
+  pred_modelo[[i]] <- cbind(test[,c("id")],
+                            pred_modelo[[i]])
+  
+  colnames(pred_modelo[[i]]) <- c("id","prediction")
+  
+}
+
+#Luego puedo unir la lista en una única matriz para traer los valores reales y calcular el error:
+
+predicciones_tr_test <- bind_rows(pred_modelo, .id = "modelo_var")
+
+
+pred_tr_test_modelo <- str_split_fixed(predicciones_tr_test$modelo_var,"_",n=2)
+pred_tr_test_modelo <- data.frame(pred_tr_test_modelo)
+colnames(pred_tr_test_modelo) <- c("modelo","variable_y")
+
+predicciones_tr_test <- cbind(predicciones_tr_test,pred_tr_test_modelo)
+
+
+
+mejores_modelos <- c("forest_ecMaxContribution",
+                     "forest_ln_ecMaxContribution",
+                     "forest_ln_totalCost",
+                     "forest_NEntreg_total",
+                     "ridge_NPub_peerArticle",
+                     "OLS_NPub_resto",
+                     "ridge_NPub_total",
+                     "lasso_num_patentes",
+                     "forest_totalCost")
+
+#Se extraen de la tabla completa las mejores predicciones:
+
+mejores_predicciones_test <- predicciones_tr_test
+
+nrow(mejores_predicciones_test)
+mejores_predicciones_test <- mejores_predicciones_test[mejores_predicciones_test$modelo_var 
+                                                       %in%mejores_modelos,]
+
+table(mejores_predicciones_test$variable_y,mejores_predicciones_test$modelo)
+
+colnames(mejores_predicciones_test)
+mejores_predicciones_test[,c("modelo_var","modelo")] <- list(NULL)
+
+mejores_predicciones_test <- pivot_wider(mejores_predicciones_test,
+                                         names_from=variable_y,
+                                         values_from=prediction)
+
+
+# Cálculo del índice integrado de cada proyecto 
+
+
+summary(mejores_predicciones_test$num_patentes)
+hist(mejores_predicciones_test$num_patentes)
+
+summary(mejores_predicciones_test$NPub_peerArticle)
+hist(mejores_predicciones_test$NPub_peerArticle)
+
+summary(mejores_predicciones_test$NPub_resto)
+hist(mejores_predicciones_test$NPub_resto)
+
+summary(mejores_predicciones_test$NEntreg_total)
+hist(mejores_predicciones_test$NEntreg_total)
+
+summary(mejores_predicciones_test$ln_ecMaxContribution)
+hist(mejores_predicciones_test$ln_ecMaxContribution)
+
+summary(mejores_predicciones_test$ecMaxContribution)
+hist(mejores_predicciones_test$ecMaxContribution)
+
+summary(mejores_predicciones_test$ln_totalCost)
+hist(mejores_predicciones_test$ln_totalCost)
+
+summary(mejores_predicciones_test$totalCost)
+hist(mejores_predicciones_test$totalCost)
+
+#Se escalan las variables para el índice:
+
+#mejores_predicciones_test$num_patentes_s <- scale(mejores_predicciones_test$num_patentes,center = TRUE, scale = TRUE)
+mejores_predicciones_test$num_patentes_s <- 0
+mejores_predicciones_test$NPub_peerArticle_s <- scale(mejores_predicciones_test$NPub_peerArticle  ,center = TRUE, scale = TRUE)
+mejores_predicciones_test$NPub_resto_s <- scale(mejores_predicciones_test$NPub_resto ,center = TRUE, scale = TRUE)
+mejores_predicciones_test$NEntreg_total_s <- scale(mejores_predicciones_test$NEntreg_total ,center = TRUE, scale = TRUE)
+mejores_predicciones_test$ecMaxContribution_s <- scale(mejores_predicciones_test$ecMaxContribution ,center = TRUE, scale = TRUE)
+mejores_predicciones_test$totalCost_s <- scale(mejores_predicciones_test$totalCost ,center = TRUE, scale = TRUE)
+
+
+#Explorar las variables escaladas que conforman el índice:
+
+summary(mejores_predicciones_test$num_patentes_s)
+hist(mejores_predicciones_test$num_patentes_s)
+
+summary(mejores_predicciones_test$NPub_peerArticle_s)
+hist(mejores_predicciones_test$NPub_peerArticle_s)
+
+summary(mejores_predicciones_test$NPub_resto_s)
+hist(mejores_predicciones_test$NPub_resto_s)
+
+summary(mejores_predicciones_test$NEntreg_total_s)
+hist(mejores_predicciones_test$NEntreg_total_s)
+
+summary(mejores_predicciones_test$ecMaxContribution_s)
+hist(mejores_predicciones_test$ecMaxContribution_s)
+
+summary(mejores_predicciones_test$totalCost_s)
+hist(mejores_predicciones_test$totalCost_s)
+
+
+#Se calcula el índice:
+
+mejores_predicciones_test$indice_integrado_s <- 
+  log(mejores_predicciones_test$num_patentes_s * 10 + 
+        mejores_predicciones_test$NPub_peerArticle_s * 60 +
+        mejores_predicciones_test$NPub_resto_s * 10 +
+        mejores_predicciones_test$NEntreg_total_s*20 + 
+        100)
+
+summary(mejores_predicciones_test$indice_integrado_s)
+hist(mejores_predicciones_test$indice_integrado_s)
+boxplot(mejores_predicciones_test$indice_integrado_s)
+
+ggplot(mejores_predicciones_test, aes(x="", y=indice_integrado_s)) + 
+  geom_boxplot(fill="slateblue", alpha=0.2) + 
+  xlab("Índice de impacto predicho de los consorcios") + 
+  ylab("Índice")
+
+
+#Clasificación final:
+
+mejores_predicciones_test$financiado <- if_else(
+  mejores_predicciones_test$indice_integrado_s>=3.8,TRUE,FALSE)
+
+decision_tr_test <- table(mejores_predicciones_test$financiado)
+decision_tr_test
+export(decision_tr_test,"./views/Clasificación Final Test Simulado.xlsx")
+
+
+#Gráficos finales:
+
+
+#Para Tr_test:
+
+#Histograma y box plot:
+
+layout(mat = matrix(c(1,2),2,1, byrow=TRUE),  height = c(1,8))
+
+par(mar=c(0, 3.1, 1.1, 2.1))
+boxplot(mejores_predicciones$indice_integrado_s , horizontal=TRUE , ylim=c(2,8), xaxt="n" , col=rgb(0.8,0.8,0,0.5) , frame=F)
+par(mar=c(4, 3.1, 1.1, 2.1))
+hist(mejores_predicciones$indice_integrado_s , breaks=40 , col=rgb(0.7,0.9,0.5,0.5) , border=F , main="" , xlab="Índice de impacto - Consorcios reales (test)", xlim=c(2,8))
+
+
+
+
+#Para test simulada:
+#Histograma y box plot:
+
+layout(mat = matrix(c(1,2),2,1, byrow=TRUE),  height = c(1,8))
+
+par(mar=c(0, 3.1, 1.1, 2.1))
+boxplot(mejores_predicciones_test$indice_integrado_s , horizontal=TRUE , ylim=c(-5,10), xaxt="n" , col=rgb(0.8,0.8,0,0.5) , frame=F)
+par(mar=c(4, 3.1, 1.1, 2.1))
+hist(mejores_predicciones_test$indice_integrado_s , breaks=40 , col=rgb(0.2,0.8,0.5,0.5) , border=F , main="" , xlab="Índice de impacto - Consorcios simulados", xlim=c(-5,10))
+
+
+#Para toda la base:
+
+base_completa <- import("./stores/train.rds")
+
+#Histograma y box plot:
+
+layout(mat = matrix(c(1,2),2,1, byrow=TRUE),  height = c(1,8))
+
+par(mar=c(0, 3.1, 1.1, 2.1))
+boxplot(base_completa$indice_integrado_s , horizontal=TRUE , ylim=c(3,6), xaxt="n" , col=rgb(0.8,0.8,0,0.5) , frame=F)
+par(mar=c(4, 3.1, 1.1, 2.1))
+hist(base_completa$indice_integrado_s , breaks=40 , col=rgb(0.2,0.8,0.5,0.5) , border=F , main="" , xlab="Índice de impacto - Todos los consorcios", xlim=c(3,6))
 
 
 

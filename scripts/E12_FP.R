@@ -1923,18 +1923,6 @@ consorcios_test <- import("./stores/consorcios_test.rds")
 
 
 
-tipo_proyecto (1-15)
-
-EC_% - 80 - 100%
-summary(train$EC_cost_share)
-
-Valor_total
-Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
-3.938e+03 1.729e+05 9.984e+05 2.366e+06 2.498e+06 1.330e+09 
-
-
-
-
 
 
 # 
@@ -1959,15 +1947,21 @@ table(H2020_project$fS_type)
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #train <- H2020_project
-train <- proyectos
+
+setwd("~/GitHub/MECA_BD_Final_project/")
+train <- import("./stores/H2020_projects.rds")
+test <- import("./stores/Test_base/H2020_projects_test.rds")
  
 colnames(train)
+colnames(test)
 
 train[ , c("legalBasis","ecSignatureDate","nature","objective",
                     "contentUpdateDate","rcn","grantDoi","masterCall","subCall",
                     "topics")] <- list(NULL)
 
-export(train,"./stores/train.rds")
+#export(train,"./stores/train.rds")
+#export(test,"./stores/test.rds")
+
 
 # Análisis preliminar: ¿correlación entre nuestro índice y el puntaje de expertos?
 cor(train$indice_integrado_s,train$expert_score_hat)
@@ -2144,7 +2138,7 @@ form_rf_articl <- as.formula(paste0("NPub_peerArticle",regresores_rf))
 form_rf_tot_publs <- as.formula(paste0("NPub_total",regresores_rf))
 form_rf_otras_pubs <- as.formula(paste0("NPub_resto",regresores_rf))
 form_rf_entreg <- as.formula(paste0("NEntreg_total",regresores_rf))
-form_rf_indice_integrado <- as.formula(paste0("indice_integrado_s",regresores_rf))
+#form_rf_indice_integrado <- as.formula(paste0("indice_integrado_s",regresores_rf))
 
 
 Tr_train_forest <- Tr_train
@@ -2280,16 +2274,16 @@ forest_entreg <- train(form_rf_entreg,
 export(forest_entreg,"./stores/modelos_entrenados/forest_entreg.rds")
 print(Sys.time())
 
-#10
-forest_indice_integrado <- train(form_rf_indice_integrado, 
-                            data=Tr_train_forest, 
-                            method='rf',
-                            trControl = control_rf,
-                            na.action  = na.pass,
-                            tuneGrid=tunegrid_rf)
-
-
-export(forest_indice_integrado,"./stores/modelos_entrenados/forest_indice_integrado.rds")
+# #10
+# forest_indice_integrado <- train(form_rf_indice_integrado, 
+#                             data=Tr_train_forest, 
+#                             method='rf',
+#                             trControl = control_rf,
+#                             na.action  = na.pass,
+#                             tuneGrid=tunegrid_rf)
+# 
+# 
+# export(forest_indice_integrado,"./stores/modelos_entrenados/forest_indice_integrado.rds")
 
 end <- Sys.time()
 end - start
@@ -2298,13 +2292,127 @@ end - start
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# 9. PREDICCIÓN ÍNDICE AGREGADO ----
+# 9. PREDICCIONES EN TR_TEST ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-#Hacer las predicciones en test
 
 
 
+#En este caso tenemos varias variables Y:
+
+#Hay que guardar los archivos en orden según estas variables:
+
+# lntotalcost
+# totalcost
+# lnECcontrib
+# ECcontrib
+# patentes
+# articl
+# tot_publs
+# otras_pubs
+# entreg
+# indice_integrado
+
+
+#Código para estimación
+
+
+#Inicialización de listas / matrices:
+
+#resumen_modelos
+modelos_pred <- list()   #Modelos entrenados
+pred_modelo <- list()    #Predicciones sobre Tr_test
+
+#Se leen los archivos del directorio
+archivos_modelos <- c(list.files("./stores/modelos_entrenados",include.dirs=TRUE))
+
+
+#Hago las predicciones y las guardo en una lista:
+
+for (i in 1:length(archivos_modelos)){
+  
+  #Se carga el modelo:
+  modelos_pred[[i]] <- readRDS(paste0("./stores/modelos_entrenados/",archivos_modelos[i]))
+  
+  #Se hace la predicción
+  pred_modelo[[i]] <- predict(modelos_pred[[i]],Tr_test)
+  
+  #Se nombra el elemento de la lista
+  names(pred_modelo)[i] <- str_remove(archivos_modelos[i], ".rds")
+  
+  #Unión de columnas: predicción con información básica
+  pred_modelo[[i]] <- cbind(Tr_test[,c("id","acronym")],
+                            pred_modelo[[i]])
+  
+  colnames(pred_modelo[[i]]) <- c("id","acronym","prediction")
+  
+}
+
+#Luego puedo unir la lista en una única matriz para traer los valores reales y calcular el error:
+
+predicciones_tr_test <- bind_rows(pred_modelo, .id = "modelo_var")
+
+
+
+# predicciones_tr_test$modelo <- data.frame(
+#   str_split_fixed(predicciones_tr_test$modelo_var,"_",n=2)[,1])
+
+pred_tr_test_modelo <- str_split_fixed(predicciones_tr_test$modelo_var,"_",n=2)
+pred_tr_test_modelo <- data.frame(pred_tr_test_modelo)
+colnames(pred_tr_test_modelo) <- c("modelo","variable_y")
+
+predicciones_tr_test <- cbind(predicciones_tr_test,pred_tr_test_modelo)
+
+# 
+# colnames(predicciones_tr_test)[ncol(predicciones_tr_test)] <- "variable_y"
+# colnames(predicciones_tr_test)[ncol(predicciones_tr_test)-1] <- "modelo"
+
+# class(predicciones_tr_test$modelo) <- "character"
+# class(predicciones_tr_test$variable_y) <- "character"
+
+#Debo traer los datos reales de Tr_test:
+                                  
+valores_reales_tr_test <- Tr_test[,c(
+  "id",
+  "ln_totalCost",
+  "totalCost",
+  "ln_ecMaxContribution",
+  "ecMaxContribution",
+  "num_patentes",
+  "NPub_peerArticle",
+  "NPub_total",
+  "NPub_resto",
+  "NEntreg_total")]
+
+
+#Convertimos esta matriz en formato largo
+valores_reales_tr_test <- valores_reales_tr_test %>% 
+  pivot_longer(!id, names_to="variable_y", values_to = "valor_real")
+
+# valores_reales_tr_test$id_var <- paste0(valores_reales_tr_test$id,"_",
+#                                         valores_reales_tr_test$variable_y)
+# 
+# predicciones_tr_test$id_var <- paste0(predicciones_tr_test$id,"_",
+#                                       predicciones_tr_test$variable_y)
+
+colnames(predicciones_tr_test)
+colnames(valores_reales_tr_test)
+
+nrow(predicciones_tr_test)
+predicciones_tr_test <- left_join(predicciones_tr_test,valores_reales_tr_test,
+                                  by=c("id", "variable_y"))
+
+colnames(predicciones_tr_test)
+colSums(is.na(predicciones_tr_test))
+
+
+predicciones_tr_test$squared_error <- (predicciones_tr_test$valor_real - 
+                                         predicciones_tr_test$prediction)^2
+ 
+
+resumen_modelos_MSE <-  predicciones_tr_test %>% 
+  group_by(variable_y,modelo) %>% 
+  summarize(MSE = mean(squared_error))
 
 
 
@@ -2330,7 +2438,7 @@ end - start
 # 12. ENSAYO TEST ORG ----
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-test_org <- import("./stores/test_org.rds")
+
 
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
